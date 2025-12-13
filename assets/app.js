@@ -1,4 +1,4 @@
-const WA_NUMBER = "6289505674504"; // <-- GANTI: format 62... tanpa +
+const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
 const state = {
@@ -120,7 +120,14 @@ function render() {
     const inStock = (p.stock ?? 0) > 0;
     const notes = Array.isArray(p.notes) ? p.notes : [];
 
+    // ✅ gambar produk (ambil dari products.json -> "image")
+    const img = p.image ? p.image : "assets/images/no-image.png";
+
     card.innerHTML = `
+      <div class="card-img">
+        <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy">
+      </div>
+
       <div class="card-top">
         <div class="kat">${escapeHtml(p.category || "Produk")}</div>
         ${p.badge ? `<div class="tag">${escapeHtml(p.badge)}</div>` : ``}
