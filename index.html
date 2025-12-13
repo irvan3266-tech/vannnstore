@@ -100,5 +100,19 @@
   </footer>
 
   <script src="assets/app.js"></script>
+      <!-- Payment Modal -->
+<div id="payModal" class="modal hidden">
+  <div class="modal-box">
+    <h3>Pilih Pembayaran</h3>
+    <div class="pay-grid">
+      <button data-pay="GoPay">GoPay</button>
+      <button data-pay="DANA">DANA</button>
+      <button data-pay="OVO">OVO</button>
+      <button data-pay="QRIS">QRIS</button>
+    </div>
+    <button class="close-btn" onclick="closePay()">Batal</button>
+  </div>
+</div>
+
 </body>
 </html>
