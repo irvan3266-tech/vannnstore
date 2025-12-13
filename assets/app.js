@@ -120,7 +120,7 @@ function render() {
     const inStock = (p.stock ?? 0) > 0;
     const notes = Array.isArray(p.notes) ? p.notes : [];
 
-    // ✅ gambar produk (ambil dari products.json -> "image")
+    // gambar produk
     const img = p.image ? p.image : "assets/images/no-image.png";
 
     card.innerHTML = `
@@ -132,10 +132,13 @@ function render() {
         <div class="kat">${escapeHtml(p.category || "Produk")}</div>
         ${p.badge ? `<div class="tag">${escapeHtml(p.badge)}</div>` : ``}
       </div>
+
       <div class="name">${escapeHtml(p.name || "Tanpa Nama")}</div>
       <p class="price">${rupiah(p.price || 0)}</p>
       <div class="unit">${escapeHtml(p.unit || "")}</div>
+
       ${notes.length ? `<ul class="notes">${notes.map(n=>`<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ``}
+
       <div class="card-foot">
         <div class="stock">${inStock ? `Stok: ${p.stock}` : `Stok habis`}</div>
         <button class="smallbtn" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">+ Keranjang</button>
@@ -229,11 +232,8 @@ function renderCartItems() {
   );
 }
 
-function checkoutWA() {
-  const map = new Map(state.products.map((p) => [p.id, p]));
-  const lines = [];
-  let total = 0;
-  function openPay() {
+/* ====== PAYMENT MODAL ====== */
+function openPay() {
   el("payModal")?.classList.remove("hidden");
 }
 function closePay() {
@@ -241,8 +241,8 @@ function closePay() {
 }
 
 function checkoutWithPayment(method) {
-  const map = new Map(state.products.map(p => [p.id, p]));
-  let lines = [];
+  const map = new Map(state.products.map((p) => [p.id, p]));
+  const lines = [];
   let total = 0;
 
   for (const [id, qty] of Object.entries(state.cart)) {
@@ -253,19 +253,27 @@ function checkoutWithPayment(method) {
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
   }
 
+  if (!lines.length) {
+    alert("Keranjang masih kosong.");
+    return;
+  }
+
   const msg =
     WA_TEXT_PREFIX +
     lines.join("\n") +
     `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}\n\nNama:\nCatatan:`;
 
-  window.open(
-    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,
-    "_blank"
-  );
+  const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
+  window.open(url, "_blank");
 
   closePay();
 }
 
+/* ====== CHECKOUT (tanpa pilih pembayaran) ====== */
+function checkoutWA() {
+  const map = new Map(state.products.map((p) => [p.id, p]));
+  const lines = [];
+  let total = 0;
 
   for (const [id, qty] of Object.entries(state.cart)) {
     const p = map.get(id);
@@ -310,7 +318,6 @@ function escapeHtml(s) {
 }
 
 async function init() {
-  // events
   ["search", "onlyInStock", "category", "sort"].forEach((id) => {
     el(id)?.addEventListener("input", render);
     el(id)?.addEventListener("change", render);
@@ -321,12 +328,27 @@ async function init() {
   el("drawerBackdrop")?.addEventListener("click", closeDrawer);
 
   el("checkout")?.addEventListener("click", checkoutWA);
+
+  el("buyNow")?.addEventListener("click", () => {
+    if (!Object.keys(state.cart).length) {
+      alert("Keranjang masih kosong");
+      return;
+    }
+    openPay();
+  });
+
   el("clearCart")?.addEventListener("click", () => {
     if (confirm("Kosongkan keranjang?")) {
       state.cart = {};
       saveCart();
       render();
     }
+  });
+
+  document.querySelectorAll("[data-pay]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      checkoutWithPayment(btn.getAttribute("data-pay"));
+    });
   });
 
   // load products
@@ -341,17 +363,3 @@ init().catch((err) => {
   console.error(err);
   alert("Gagal memuat produk. Cek products.json dan app.js.");
 });
-el("buyNow")?.addEventListener("click", () => {
-  if (!Object.keys(state.cart).length) {
-    alert("Keranjang masih kosong");
-    return;
-  }
-  openPay();
-});
-
-document.querySelectorAll("[data-pay]").forEach(btn => {
-  btn.addEventListener("click", () => {
-    checkoutWithPayment(btn.getAttribute("data-pay"));
-  });
-});
-
