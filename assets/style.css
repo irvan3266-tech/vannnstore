@@ -207,3 +207,20 @@ body{
 .hint{color:var(--muted); font-size:12px; margin:10px 0 0}
 .hidden{display:none !important}
 .muted{color:var(--muted)}
+.card-img {
+  width: 100%;
+  height: 160px;
+  border-radius: 14px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.card-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
