@@ -1,4 +1,4 @@
-const WA_NUMBER = "6281234567890"; // <-- GANTI: format 62... tanpa +
+const WA_NUMBER = "6289505674504"; // <-- GANTI: format 62... tanpa +
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
 const state = {
