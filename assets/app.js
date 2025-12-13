@@ -233,6 +233,39 @@ function checkoutWA() {
   const map = new Map(state.products.map((p) => [p.id, p]));
   const lines = [];
   let total = 0;
+  function openPay() {
+  el("payModal")?.classList.remove("hidden");
+}
+function closePay() {
+  el("payModal")?.classList.add("hidden");
+}
+
+function checkoutWithPayment(method) {
+  const map = new Map(state.products.map(p => [p.id, p]));
+  let lines = [];
+  let total = 0;
+
+  for (const [id, qty] of Object.entries(state.cart)) {
+    const p = map.get(id);
+    if (!p) continue;
+    const sub = (p.price || 0) * qty;
+    total += sub;
+    lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
+  }
+
+  const msg =
+    WA_TEXT_PREFIX +
+    lines.join("\n") +
+    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}\n\nNama:\nCatatan:`;
+
+  window.open(
+    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,
+    "_blank"
+  );
+
+  closePay();
+}
+
 
   for (const [id, qty] of Object.entries(state.cart)) {
     const p = map.get(id);
@@ -308,3 +341,17 @@ init().catch((err) => {
   console.error(err);
   alert("Gagal memuat produk. Cek products.json dan app.js.");
 });
+el("buyNow")?.addEventListener("click", () => {
+  if (!Object.keys(state.cart).length) {
+    alert("Keranjang masih kosong");
+    return;
+  }
+  openPay();
+});
+
+document.querySelectorAll("[data-pay]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    checkoutWithPayment(btn.getAttribute("data-pay"));
+  });
+});
+
