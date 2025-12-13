@@ -32,21 +32,23 @@
       <h1>Selamat datang di <span class="accent">vannnstore</span></h1>
       <p>Checkout langsung via WhatsApp. Produk & harga bisa kamu edit di <code>products.json</code>.</p>
 
-      <div class="hero-row">
-        <label class="switch">
-          <input id="onlyInStock" type="checkbox">
-          <span>Tampilkan yang stok tersedia saja</span>
-        </label>
+     <div class="hero-row">
+  <label class="switch">
+    <input id="onlyInStock" type="checkbox">
+    <span>Tampilkan yang stok tersedia saja</span>
+  </label>
 
-        <select id="sort" class="input">
-          <option value="popular">Urutkan: Populer</option>
-          <option value="low">Harga: Termurah</option>
-          <option value="high">Harga: Termahal</option>
-          <option value="az">Nama: A-Z</option>
-        </select>
-      </div>
-    </section>
+  <select id="category" class="input">
+    <option value="all">Semua Kategori</option>
+  </select>
 
+  <select id="sort" class="input">
+    <option value="popular">Urutkan: Populer</option>
+    <option value="low">Harga: Termurah</option>
+    <option value="high">Harga: Termahal</option>
+    <option value="az">Nama: A-Z</option>
+  </select>
+</div>
     <section>
       <div id="grid" class="grid" aria-live="polite"></div>
       <div id="empty" class="empty hidden">
