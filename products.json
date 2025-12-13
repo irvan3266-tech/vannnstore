@@ -4,7 +4,7 @@
     "name": "CapCut Pro Private 7 Hari",
     "category": "CapCut",
     "price": 7000,
-    "image": "assets/images/capcut.png"
+    "image": "assets/images/capcut.png",
     "unit": "7 hari",
     "stock": 999,
     "badge": "Private",
@@ -19,7 +19,7 @@
     "name": "CapCut Pro Private 30 Hari",
     "category": "CapCut",
     "price": 10000,
-    "image": "assets/images/capcut.png"
+    "image": "assets/images/capcut.png",
     "unit": "30 hari",
     "stock": 999,
     "badge": "Garansi 7 Hari",
@@ -35,7 +35,7 @@
     "name": "CapCut Pro Private 30 Hari",
     "category": "CapCut",
     "price": 15000,
-    "image": "assets/images/capcut.png"
+    "image": "assets/images/capcut.png",
     "unit": "30 hari",
     "stock": 999,
     "badge": "Full Garansi",
@@ -46,13 +46,12 @@
       "Wajib pakai aplikasi versi terbaru"
     ]
   },
-
   {
     "id": "canva-pro-1m",
     "name": "Canva Pro",
     "category": "Canva",
     "price": 5000,
-    "image": "assets/images/canva.png"
+    "image": "assets/images/canva.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Murah",
@@ -63,7 +62,7 @@
     "name": "Canva Edu Lifetime",
     "category": "Canva",
     "price": 15000,
-    "image": "assets/images/canva.png"
+    "image": "assets/images/canva.png",
     "unit": "selamanya",
     "stock": 999,
     "badge": "Promo",
@@ -74,7 +73,7 @@
     "name": "Canva Head Owner",
     "category": "Canva",
     "price": 10000,
-    "image": "assets/images/canva.png"
+    "image": "assets/images/canva.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Invite 100",
@@ -84,13 +83,12 @@
       "All device"
     ]
   },
-
   {
     "id": "vidio-platinum-sharing",
     "name": "Vidio Platinum Sharing 2U",
     "category": "Vidio",
     "price": 25000,
-    "image": "assets/images/vidio.png"
+    "image": "assets/images/vidio.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "All Device",
@@ -106,7 +104,7 @@
     "name": "Vidio Private All Device",
     "category": "Vidio",
     "price": 40000,
-    "image": "assets/images/vidio.png"
+    "image": "assets/images/vidio.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Private",
@@ -117,7 +115,7 @@
     "name": "Vidio Private Mobile",
     "category": "Vidio",
     "price": 27000,
-    "image": "assets/images/vidio.png"
+    "image": "assets/images/vidio.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Mobile Only",
@@ -136,13 +134,12 @@
     "badge": "TV Only",
     "notes": ["Garansi 1 bulan"]
   },
-
   {
     "id": "getcontact-1m",
     "name": "GetContact Premium",
     "category": "GetContact",
     "price": 15000,
-    "image": "assets/images/getcontact.png"
+    "image": "assets/images/getcontact.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Unlimited Stock",
@@ -158,19 +155,18 @@
     "name": "GetContact Premium",
     "category": "GetContact",
     "price": 30000,
-    "image": "assets/images/getcontact.png"
+    "image": "assets/images/getcontact.png",
     "unit": "3 bulan",
     "stock": 999,
     "badge": "Hemat",
     "notes": ["Unlimited stock", "Garansi 23 hari"]
   },
-
   {
     "id": "gemini-1m-emailmu",
     "name": "Gemini AI",
     "category": "AI",
     "price": 10000,
-    "image": "assets/images/gemini.png"
+    "image": "assets/images/gemini.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Email Sendiri",
@@ -181,7 +177,7 @@
     "name": "Gemini AI Admin",
     "category": "AI",
     "price": 30000,
-    "image": "assets/images/gemini.png"
+    "image": "assets/images/gemini.png",
     "unit": "12 bulan",
     "stock": 999,
     "badge": "Admin",
@@ -191,13 +187,12 @@
       "Veo 3"
     ]
   },
-
   {
     "id": "netflix-1p1u",
     "name": "Netflix Premium 1P1U",
     "category": "Netflix",
     "price": 30000,
-    "image": "assets/images/netflix.png"
+    "image": "assets/images/netflix.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Private",
@@ -208,7 +203,7 @@
     "name": "Netflix Semi Private",
     "category": "Netflix",
     "price": 45000,
-    "image": "assets/images/netflix.png"
+    "image": "assets/images/netflix.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Semi Private",
@@ -218,7 +213,6 @@
       "+2k request nama & PIN"
     ]
   },
-
   {
     "id": "youtube-prem",
     "name": "YouTube Premium",
@@ -232,7 +226,6 @@
       "Cukup kirim email"
     ]
   },
-
   {
     "id": "gmail-fresh",
     "name": "Gmail Fresh",
@@ -246,13 +239,12 @@
       "Langsung ganti sandi"
     ]
   },
-
   {
     "id": "wetv-sharing",
     "name": "WeTV VIP Sharing 6U",
     "category": "WeTV",
     "price": 5000,
-    "image": "assets/images/wetv.png"
+    "image": "assets/images/wetv.png",
     "unit": "1 bulan",
     "stock": 999,
     "badge": "Sharing",
