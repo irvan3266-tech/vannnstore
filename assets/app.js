@@ -1,4 +1,4 @@
-const WA_NUMBER = "6289505674504"; // <-- GANTI: format internasional tanpa + (contoh: 62812xxxx)
+const WA_NUMBER = "6289505674504"; 
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
 const state = {
@@ -44,6 +44,11 @@ function filteredProducts(){
       (p.category||"").toLowerCase().includes(q)
     );
   }
+    const cat = (el("category")?.value || "all").trim();
+  if (cat !== "all"){
+    items = items.filter(p => normalizeCategory(p.category) === cat);
+  }
+
   if (onlyStock){
     items = items.filter(p => (p.stock ?? 0) > 0);
   }
@@ -209,14 +214,33 @@ function escapeHtml(s){
     .replaceAll('"',"&quot;")
     .replaceAll("'","&#039;");
 }
+function normalizeCategory(s){
+  return String(s || "").trim();
+}
+
+function buildCategoryOptions(){
+  const sel = el("category");
+  if (!sel) return;
+
+  // Ambil kategori unik dari produk
+  const cats = Array.from(new Set(
+    state.products
+      .map(p => normalizeCategory(p.category))
+      .filter(Boolean)
+  )).sort((a,b)=>a.localeCompare(b));
+
+  // Reset options
+  sel.innerHTML = `<option value="all">Semua Kategori</option>` +
+    cats.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+}
 
 async function init(){
   // events
-  ["search","onlyInStock","sort"].forEach(id=>{
-    el(id).addEventListener("input", render);
-    el(id).addEventListener("change", render);
-  });
-
+["search","onlyInStock","category","sort"].forEach(id=>{
+  el(id)?.addEventListener("input", render);
+  el(id)?.addEventListener("change", render);
+});
+  
   el("openCart").addEventListener("click", openDrawer);
   el("closeCart").addEventListener("click", closeDrawer);
   el("drawerBackdrop").addEventListener("click", closeDrawer);
@@ -232,10 +256,10 @@ async function init(){
 
   // load products
   const res = await fetch("products.json", { cache: "no-store" });
-  state.products = await res.json();
+state.products = await res.json();
+buildCategoryOptions();
+render();
 
-  render();
-}
 
 init().catch(err=>{
   console.error(err);
