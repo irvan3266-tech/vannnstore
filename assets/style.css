@@ -223,4 +223,57 @@ body{
   object-fit: cover;
   display: block;
 }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-box {
+  background: #0f1220;
+  padding: 20px;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 360px;
+  color: #fff;
+}
+
+.pay-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 15px 0;
+}
+
+.pay-grid button {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: #161a33;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.pay-grid button:hover {
+  background: #5b5cf6;
+}
+
+.close-btn {
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  background: #333;
+  color: #fff;
+}
 
