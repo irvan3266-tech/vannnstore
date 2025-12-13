@@ -1,0 +1,248 @@
+[
+  {
+    "id": "capcut-7d",
+    "name": "CapCut Pro Private 7 Hari",
+    "category": "CapCut",
+    "price": 7000,
+    "unit": "7 hari",
+    "stock": 999,
+    "badge": "Private",
+    "notes": [
+      "Bebas ganti email & password",
+      "Dapat email akses",
+      "Wajib pakai aplikasi versi terbaru"
+    ]
+  },
+  {
+    "id": "capcut-30d-basic",
+    "name": "CapCut Pro Private 30 Hari",
+    "category": "CapCut",
+    "price": 10000,
+    "unit": "30 hari",
+    "stock": 999,
+    "badge": "Garansi 7 Hari",
+    "notes": [
+      "Garansi backfree 7 hari",
+      "Bebas ganti email & password",
+      "Durasi aman jika akun tidak diloginkan 3–4 hari",
+      "Wajib pakai aplikasi versi terbaru"
+    ]
+  },
+  {
+    "id": "capcut-30d-full",
+    "name": "CapCut Pro Private 30 Hari",
+    "category": "CapCut",
+    "price": 15000,
+    "unit": "30 hari",
+    "stock": 999,
+    "badge": "Full Garansi",
+    "notes": [
+      "Full garansi 30 hari",
+      "Bebas ganti email & password",
+      "Durasi aman jika akun tidak diloginkan 3–4 hari",
+      "Wajib pakai aplikasi versi terbaru"
+    ]
+  },
+
+  {
+    "id": "canva-pro-1m",
+    "name": "Canva Pro",
+    "category": "Canva",
+    "price": 5000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Murah",
+    "notes": ["All device"]
+  },
+  {
+    "id": "canva-edu-life",
+    "name": "Canva Edu Lifetime",
+    "category": "Canva",
+    "price": 15000,
+    "unit": "selamanya",
+    "stock": 999,
+    "badge": "Promo",
+    "notes": ["Akses selamanya", "All device"]
+  },
+  {
+    "id": "canva-head-owner",
+    "name": "Canva Head Owner",
+    "category": "Canva",
+    "price": 10000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Invite 100",
+    "notes": [
+      "Bisa invite hingga 100 anggota",
+      "Garansi 6 bulan",
+      "All device"
+    ]
+  },
+
+  {
+    "id": "vidio-platinum-sharing",
+    "name": "Vidio Platinum Sharing 2U",
+    "category": "Vidio",
+    "price": 25000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "All Device",
+    "notes": [
+      "Sharing 2 user",
+      "Login 1 device",
+      "Akses Bein, Liga 1 & Premier Channel",
+      "Garansi backfree"
+    ]
+  },
+  {
+    "id": "vidio-private-alldev",
+    "name": "Vidio Private All Device",
+    "category": "Vidio",
+    "price": 40000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Private",
+    "notes": ["All device", "Garansi backfree"]
+  },
+  {
+    "id": "vidio-private-mobile",
+    "name": "Vidio Private Mobile",
+    "category": "Vidio",
+    "price": 27000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Mobile Only",
+    "notes": [
+      "Hanya bisa login di HP",
+      "Nomor sesuai buyer"
+    ]
+  },
+  {
+    "id": "vidio-tv-1y",
+    "name": "Vidio Platinum TV Only",
+    "category": "Vidio",
+    "price": 10000,
+    "unit": "1 tahun",
+    "stock": 999,
+    "badge": "TV Only",
+    "notes": ["Garansi 1 bulan"]
+  },
+
+  {
+    "id": "getcontact-1m",
+    "name": "GetContact Premium",
+    "category": "GetContact",
+    "price": 15000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Unlimited Stock",
+    "notes": [
+      "Limit pencarian 300/bulan",
+      "Limit lihat tag 40/bulan",
+      "Garansi 23 hari",
+      "Nomor WhatsApp aktif"
+    ]
+  },
+  {
+    "id": "getcontact-3m",
+    "name": "GetContact Premium",
+    "category": "GetContact",
+    "price": 30000,
+    "unit": "3 bulan",
+    "stock": 999,
+    "badge": "Hemat",
+    "notes": ["Unlimited stock", "Garansi 23 hari"]
+  },
+
+  {
+    "id": "gemini-1m-emailmu",
+    "name": "Gemini AI",
+    "category": "AI",
+    "price": 10000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Email Sendiri",
+    "notes": ["Invite via email"]
+  },
+  {
+    "id": "gemini-12m-admin",
+    "name": "Gemini AI Admin",
+    "category": "AI",
+    "price": 30000,
+    "unit": "12 bulan",
+    "stock": 999,
+    "badge": "Admin",
+    "notes": [
+      "Bisa invite 5 member",
+      "GDrive 2TB",
+      "Veo 3"
+    ]
+  },
+
+  {
+    "id": "netflix-1p1u",
+    "name": "Netflix Premium 1P1U",
+    "category": "Netflix",
+    "price": 30000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Private",
+    "notes": ["1 profile 1 user", "Full garansi"]
+  },
+  {
+    "id": "netflix-semi",
+    "name": "Netflix Semi Private",
+    "category": "Netflix",
+    "price": 45000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Semi Private",
+    "notes": [
+      "Login 2 device",
+      "Tidak boleh nonton bersamaan",
+      "+2k request nama & PIN"
+    ]
+  },
+
+  {
+    "id": "youtube-prem",
+    "name": "YouTube Premium",
+    "category": "YouTube",
+    "price": 15000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Via Invite",
+    "notes": [
+      "Termasuk YouTube Music",
+      "Cukup kirim email"
+    ]
+  },
+
+  {
+    "id": "gmail-fresh",
+    "name": "Gmail Fresh",
+    "category": "Email",
+    "price": 5000,
+    "unit": "per email",
+    "stock": 999,
+    "badge": "Ready",
+    "notes": [
+      "Akun dari seller",
+      "Langsung ganti sandi"
+    ]
+  },
+
+  {
+    "id": "wetv-sharing",
+    "name": "WeTV VIP Sharing 6U",
+    "category": "WeTV",
+    "price": 5000,
+    "unit": "1 bulan",
+    "stock": 999,
+    "badge": "Sharing",
+    "notes": [
+      "Sharing max 6 user",
+      "Full garansi backfree"
+    ]
+  }
+]
