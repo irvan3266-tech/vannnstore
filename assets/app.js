@@ -102,16 +102,12 @@ function render() {
   const items = filteredProducts();
   const grid = el("grid");
   const empty = el("empty");
-
   if (!grid) return;
 
   grid.innerHTML = "";
 
-  if (!items.length) {
-    empty && empty.classList.remove("hidden");
-  } else {
-    empty && empty.classList.add("hidden");
-  }
+  if (!items.length) empty && empty.classList.remove("hidden");
+  else empty && empty.classList.add("hidden");
 
   for (const p of items) {
     const card = document.createElement("div");
@@ -120,7 +116,6 @@ function render() {
     const inStock = (p.stock ?? 0) > 0;
     const notes = Array.isArray(p.notes) ? p.notes : [];
 
-    // gambar produk
     const img = p.image ? p.image : "assets/images/no-image.png";
 
     card.innerHTML = `
@@ -232,7 +227,7 @@ function renderCartItems() {
   );
 }
 
-/* ====== PAYMENT MODAL ====== */
+/* ========= PAYMENT MODAL ========= */
 function openPay() {
   el("payModal")?.classList.remove("hidden");
 }
@@ -269,7 +264,7 @@ function checkoutWithPayment(method) {
   closePay();
 }
 
-/* ====== CHECKOUT (tanpa pilih pembayaran) ====== */
+/* ========= CHECKOUT NORMAL ========= */
 function checkoutWA() {
   const map = new Map(state.products.map((p) => [p.id, p]));
   const lines = [];
@@ -345,13 +340,13 @@ async function init() {
     }
   });
 
+  // tombol metode bayar di modal
   document.querySelectorAll("[data-pay]").forEach((btn) => {
     btn.addEventListener("click", () => {
       checkoutWithPayment(btn.getAttribute("data-pay"));
     });
   });
 
-  // load products
   const res = await fetch("products.json", { cache: "no-store" });
   state.products = await res.json();
 
