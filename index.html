@@ -101,19 +101,30 @@
   </footer>
 
   <script src="assets/app.js"></script>
-      <!-- Payment Modal -->
-<div id="payModal" class="modal hidden">
+<!-- QRIS Modal (vannnstore) -->
+<div id="qrisModal" class="modal hidden" aria-hidden="true">
   <div class="modal-box">
-    <h3>Pilih Pembayaran</h3>
-    <div class="pay-grid">
-      <button data-pay="GoPay">GoPay</button>
-      <button data-pay="DANA">DANA</button>
-      <button data-pay="OVO">OVO</button>
-      <button data-pay="QRIS">QRIS</button>
+    <div class="modal-head">
+      <h3>Bayar via QRIS</h3>
+      <button class="icon-btn" type="button" onclick="closeQris()">✕</button>
     </div>
-    <button class="close-btn" onclick="closePay()">Batal</button>
+
+    <div class="qris-img">
+      <!-- ✅ GANTI FILE GAMBAR QRIS DI SINI -->
+      <img src="assets/images/qris.png" alt="QRIS vannnstore" loading="lazy">
+    </div>
+
+    <div class="qris-total">
+      <span>Total</span>
+      <strong id="qrisTotalText">Rp 0</strong>
+    </div>
+
+    <button id="confirmWA" class="btn primary" type="button">
+      Saya Sudah Bayar / Konfirmasi WhatsApp
+    </button>
+
+    <button class="btn ghost" type="button" onclick="closeQris()">Tutup</button>
   </div>
 </div>
-
 </body>
 </html>
