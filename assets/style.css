@@ -287,3 +287,34 @@ body{
   margin:12px 0;
   color:#fff;
 }
+/* ===== Toast Notification ===== */
+.toast{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.toast.hidden{
+  display: none;
+}
+
+.toast-box{
+  background: linear-gradient(135deg, #7c5cff, #5b5cf6);
+  color: #fff;
+  padding: 16px 22px;
+  border-radius: 16px;
+  font-weight: 800;
+  box-shadow: 0 15px 40px rgba(0,0,0,.4);
+  animation: toastPop 1.4s ease forwards;
+}
+
+@keyframes toastPop{
+  0%{transform: scale(.6);opacity:0}
+  20%{transform: scale(1.05);opacity:1}
+  80%{transform: scale(1);opacity:1}
+  100%{transform: scale(.9);opacity:0}
+}
