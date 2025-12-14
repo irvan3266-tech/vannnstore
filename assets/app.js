@@ -277,6 +277,47 @@ function checkoutWA() {
     total += sub;
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
   }
+  function openQris() {
+  const total = cartTotal();
+  const t = el("qrisTotalText");
+  if (t) t.textContent = rupiah(total);
+
+  el("qrisModal")?.classList.remove("hidden");
+  el("qrisModal")?.setAttribute("aria-hidden", "false");
+}
+
+function closeQris() {
+  el("qrisModal")?.classList.add("hidden");
+  el("qrisModal")?.setAttribute("aria-hidden", "true");
+}
+
+// WA khusus konfirmasi QRIS
+function checkoutWA_QRIS() {
+  const map = new Map(state.products.map((p) => [p.id, p]));
+  const lines = [];
+  let total = 0;
+
+  for (const [id, qty] of Object.entries(state.cart)) {
+    const p = map.get(id);
+    if (!p) continue;
+    const sub = (p.price || 0) * qty;
+    total += sub;
+    lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
+  }
+
+  if (!lines.length) {
+    alert("Keranjang masih kosong.");
+    return;
+  }
+
+  const msg =
+    WA_TEXT_PREFIX +
+    lines.join("\n") +
+    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: QRIS\n\nNama:\nBukti transfer (jika ada):\nCatatan:`;
+
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+}
+
 
   if (!lines.length) {
     alert("Keranjang masih kosong.");
@@ -325,11 +366,15 @@ async function init() {
   el("checkout")?.addEventListener("click", checkoutWA);
 
   el("buyNow")?.addEventListener("click", () => {
-    if (!Object.keys(state.cart).length) {
-      alert("Keranjang masih kosong");
-      return;
-    }
-    openPay();
+  if (!Object.keys(state.cart).length) {
+    alert("Keranjang masih kosong");
+    return;
+  }
+  openQris();
+});
+
+el("confirmWA")?.addEventListener("click", checkoutWA_QRIS);
+
   });
 
   el("clearCart")?.addEventListener("click", () => {
