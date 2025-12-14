@@ -7,6 +7,7 @@
   <meta name="description" content="Toko digital vannnstore" />
   <link rel="stylesheet" href="assets/style.css" />
 </head>
+
 <body>
   <header class="topbar">
     <div class="container row">
@@ -14,13 +15,13 @@
         <div class="logo">V</div>
         <div>
           <div class="title">vannnstore</div>
-          <div class="subtitle">Web store Paling murah </div>
+          <div class="subtitle">Web store Paling murah</div>
         </div>
       </div>
 
       <div class="actions">
         <input id="search" class="input" placeholder="Cari produk..." autocomplete="off" />
-        <button id="openCart" class="btn">
+        <button id="openCart" class="btn" type="button">
           Keranjang <span id="cartCount" class="pill">0</span>
         </button>
       </div>
@@ -30,25 +31,27 @@
   <main class="container">
     <section class="hero">
       <h1>Selamat datang di <span class="accent">vannnstore</span></h1>
-      <p> Semua produk bergaransi dan resmi </p>
+      <p>Semua produk bergaransi dan resmi</p>
 
-     <div class="hero-row">
-  <label class="switch">
-    <input id="onlyInStock" type="checkbox">
-    <span>Tampilkan yang stok tersedia saja</span>
-  </label>
+      <div class="hero-row">
+        <label class="switch">
+          <input id="onlyInStock" type="checkbox">
+          <span>Tampilkan yang stok tersedia saja</span>
+        </label>
 
-  <select id="category" class="input">
-    <option value="all">Semua Kategori</option>
-  </select>
+        <select id="category" class="input">
+          <option value="all">Semua Kategori</option>
+        </select>
 
-  <select id="sort" class="input">
-    <option value="popular">Urutkan: Populer</option>
-    <option value="low">Harga: Termurah</option>
-    <option value="high">Harga: Termahal</option>
-    <option value="az">Nama: A-Z</option>
-  </select>
-</div>
+        <select id="sort" class="input">
+          <option value="popular">Urutkan: Populer</option>
+          <option value="low">Harga: Termurah</option>
+          <option value="high">Harga: Termahal</option>
+          <option value="az">Nama: A-Z</option>
+        </select>
+      </div>
+    </section>
+
     <section>
       <div id="grid" class="grid" aria-live="polite"></div>
       <div id="empty" class="empty hidden">
@@ -57,25 +60,28 @@
       </div>
     </section>
 
-   <section class="faq">
-  <h2>Info Toko</h2>
-  <ul>
-    <li>📌 vannnstore menyediakan berbagai produk digital premium.</li>
-    <li>⚡ Proses cepat & otomatis via WhatsApp.</li>
-    <li>🛡️ Garansi sesuai ketentuan masing-masing produk.</li>
-    <li>📱 Support Android, iOS & All Device.</li>
-    <li>📩 Silakan hubungi admin jika stok kosong atau ingin tanya produk.</li>
-  </ul>
-</section>
+    <section class="faq">
+      <h2>Info Toko</h2>
+      <ul>
+        <li>📌 vannnstore menyediakan berbagai produk digital premium.</li>
+        <li>⚡ Proses cepat & otomatis via WhatsApp.</li>
+        <li>🛡️ Garansi sesuai ketentuan masing-masing produk.</li>
+        <li>📱 Support Android, iOS & All Device.</li>
+        <li>📩 Silakan hubungi admin jika stok kosong atau ingin tanya produk.</li>
+      </ul>
+    </section>
+  </main>
+
   <!-- CART DRAWER -->
   <div id="drawerBackdrop" class="backdrop hidden"></div>
+
   <aside id="drawer" class="drawer hidden" aria-hidden="true">
     <div class="drawer-head">
       <div>
         <div class="drawer-title">Keranjang</div>
         <div class="drawer-sub" id="cartMeta">0 item</div>
       </div>
-      <button id="closeCart" class="iconbtn" aria-label="Tutup">✕</button>
+      <button id="closeCart" class="iconbtn" type="button" aria-label="Tutup">✕</button>
     </div>
 
     <div id="cartItems" class="cart"></div>
@@ -85,14 +91,42 @@
         <span>Total</span>
         <strong id="cartTotal">Rp 0</strong>
       </div>
-      <button id="checkout" class="btn primary">Checkout via WhatsApp</button>
-      <button id="buyNow" class="btn primary">Beli Sekarang</button>
-      <button id="clearCart" class="btn ghost">Kosongkan</button>
+
+      <button id="checkout" class="btn primary" type="button">Checkout via WhatsApp</button>
+      <button id="buyNow" class="btn primary" type="button">Beli Sekarang</button>
+      <button id="clearCart" class="btn ghost" type="button">Kosongkan</button>
+
       <p class="hint">
         Catatan: pastikan kamu hanya menjual produk/jasa yang memang kamu berhak jual.
       </p>
     </div>
   </aside>
+
+  <!-- QRIS Modal (vannnstore) -->
+  <div id="qrisModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Bayar via QRIS</h3>
+        <button class="icon-btn" type="button" onclick="closeQris()">✕</button>
+      </div>
+
+      <div class="qris-img">
+        <!-- ✅ GANTI FILE GAMBAR QRIS DI SINI -->
+        <img src="assets/images/qris.jpeg" alt="QRIS vannnstore" loading="lazy">
+      </div>
+
+      <div class="qris-total">
+        <span>Total</span>
+        <strong id="qrisTotalText">Rp 0</strong>
+      </div>
+
+      <button id="confirmWA" class="btn primary" type="button">
+        Saya Sudah Bayar / Konfirmasi WhatsApp
+      </button>
+
+      <button class="btn ghost" type="button" onclick="closeQris()">Tutup</button>
+    </div>
+  </div>
 
   <footer class="footer">
     <div class="container row">
@@ -101,30 +135,5 @@
   </footer>
 
   <script src="assets/app.js"></script>
-<!-- QRIS Modal (vannnstore) -->
-<div id="qrisModal" class="modal hidden" aria-hidden="true">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h3>Bayar via QRIS</h3>
-      <button class="icon-btn" type="button" onclick="closeQris()">✕</button>
-    </div>
-
-    <div class="qris-img">
-      <!-- ✅ GANTI FILE GAMBAR QRIS DI SINI -->
-      <img src="assets/images/qris.jpeg" alt="QRIS vannnstore" loading="lazy">
-    </div>
-
-    <div class="qris-total">
-      <span>Total</span>
-      <strong id="qrisTotalText">Rp 0</strong>
-    </div>
-
-    <button id="confirmWA" class="btn primary" type="button">
-      Saya Sudah Bayar / Konfirmasi WhatsApp
-    </button>
-
-    <button class="btn ghost" type="button" onclick="closeQris()">Tutup</button>
-  </div>
-</div>
 </body>
 </html>
