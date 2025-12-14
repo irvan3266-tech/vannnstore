@@ -213,7 +213,24 @@ function addToCart(id) {
   state.cart[id] = (state.cart[id] || 0) + 1;
   saveCart();
   render();
+  showToast(); 
 }
+function showToast(){
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+
+  toast.classList.remove("hidden");
+
+  const box = toast.querySelector(".toast-box");
+  box.style.animation = "none";
+  box.offsetHeight; // reset animasi
+  box.style.animation = null;
+
+  setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 1400);
+}
+
 
 function decFromCart(id) {
   const cur = state.cart[id] || 0;
