@@ -3,7 +3,7 @@ const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
 const state = {
   products: [],
-  cart: loadCart(), // { [id]: qty }
+  cart: loadCart() // { [id]: qty }
 };
 
 const el = (id) => document.getElementById(id);
@@ -30,6 +30,7 @@ function saveCart() {
 function cartCount() {
   return Object.values(state.cart).reduce((a, b) => a + b, 0);
 }
+
 function cartTotal() {
   const map = new Map(state.products.map((p) => [p.id, p]));
   let total = 0;
@@ -44,15 +45,22 @@ function normalizeCategory(s) {
   return String(s || "").trim();
 }
 
+function escapeHtml(s) {
+  return String(s ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 function buildCategoryOptions() {
   const sel = el("category");
   if (!sel) return;
 
   const cats = Array.from(
     new Set(
-      state.products
-        .map((p) => normalizeCategory(p.category))
-        .filter(Boolean)
+      state.products.map((p) => normalizeCategory(p.category)).filter(Boolean)
     )
   ).sort((a, b) => a.localeCompare(b));
 
@@ -95,6 +103,53 @@ function filteredProducts() {
   return items;
 }
 
+function renderCartItems() {
+  const wrap = el("cartItems");
+  if (!wrap) return;
+
+  wrap.innerHTML = "";
+  const map = new Map(state.products.map((p) => [p.id, p]));
+  const ids = Object.keys(state.cart);
+
+  if (!ids.length) {
+    wrap.innerHTML = `<div class="empty"><h3>Keranjang kosong</h3><p>Tambahkan produk dulu ya.</p></div>`;
+    return;
+  }
+
+  for (const id of ids) {
+    const p = map.get(id);
+    if (!p) continue;
+
+    const qty = state.cart[id];
+
+    const item = document.createElement("div");
+    item.className = "cart-item";
+    item.innerHTML = `
+      <div class="cart-name">${escapeHtml(p.name)}</div>
+      <div class="cart-meta">${rupiah(p.price || 0)} • ${escapeHtml(p.category || "")}</div>
+      <div class="qtyrow">
+        <div class="qtyctrl">
+          <button class="qbtn" type="button" data-dec="${escapeHtml(id)}">−</button>
+          <strong>${qty}</strong>
+          <button class="qbtn" type="button" data-inc="${escapeHtml(id)}">+</button>
+        </div>
+        <button class="btn ghost" type="button" data-rm="${escapeHtml(id)}">Hapus</button>
+      </div>
+    `;
+    wrap.appendChild(item);
+  }
+
+  wrap.querySelectorAll("[data-inc]").forEach((b) =>
+    b.addEventListener("click", () => addToCart(b.getAttribute("data-inc")))
+  );
+  wrap.querySelectorAll("[data-dec]").forEach((b) =>
+    b.addEventListener("click", () => decFromCart(b.getAttribute("data-dec")))
+  );
+  wrap.querySelectorAll("[data-rm]").forEach((b) =>
+    b.addEventListener("click", () => removeFromCart(b.getAttribute("data-rm")))
+  );
+}
+
 function render() {
   const year = el("year");
   if (year) year.textContent = new Date().getFullYear();
@@ -115,28 +170,23 @@ function render() {
 
     const inStock = (p.stock ?? 0) > 0;
     const notes = Array.isArray(p.notes) ? p.notes : [];
-
     const img = p.image ? p.image : "assets/images/no-image.png";
 
     card.innerHTML = `
       <div class="card-img">
         <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy">
       </div>
-
       <div class="card-top">
         <div class="kat">${escapeHtml(p.category || "Produk")}</div>
         ${p.badge ? `<div class="tag">${escapeHtml(p.badge)}</div>` : ``}
       </div>
-
       <div class="name">${escapeHtml(p.name || "Tanpa Nama")}</div>
       <p class="price">${rupiah(p.price || 0)}</p>
       <div class="unit">${escapeHtml(p.unit || "")}</div>
-
       ${notes.length ? `<ul class="notes">${notes.map(n=>`<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ``}
-
       <div class="card-foot">
         <div class="stock">${inStock ? `Stok: ${p.stock}` : `Stok habis`}</div>
-        <button class="smallbtn" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">+ Keranjang</button>
+        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">+ Keranjang</button>
       </div>
     `;
 
@@ -179,119 +229,31 @@ function removeFromCart(id) {
   render();
 }
 
-function renderCartItems() {
-  const wrap = el("cartItems");
-  if (!wrap) return;
-
-  wrap.innerHTML = "";
-
-  const map = new Map(state.products.map((p) => [p.id, p]));
-  const ids = Object.keys(state.cart);
-
-  if (!ids.length) {
-    wrap.innerHTML = `<div class="empty"><h3>Keranjang kosong</h3><p>Tambahkan produk dulu ya.</p></div>`;
-    return;
-  }
-
-  for (const id of ids) {
-    const p = map.get(id);
-    if (!p) continue;
-
-    const qty = state.cart[id];
-
-    const item = document.createElement("div");
-    item.className = "cart-item";
-    item.innerHTML = `
-      <div class="cart-name">${escapeHtml(p.name)}</div>
-      <div class="cart-meta">${rupiah(p.price || 0)} • ${escapeHtml(p.category || "")}</div>
-      <div class="qtyrow">
-        <div class="qtyctrl">
-          <button class="qbtn" data-dec="${escapeHtml(id)}">−</button>
-          <strong>${qty}</strong>
-          <button class="qbtn" data-inc="${escapeHtml(id)}">+</button>
-        </div>
-        <button class="btn ghost" data-rm="${escapeHtml(id)}">Hapus</button>
-      </div>
-    `;
-    wrap.appendChild(item);
-  }
-
-  wrap.querySelectorAll("[data-inc]").forEach((b) =>
-    b.addEventListener("click", () => addToCart(b.getAttribute("data-inc")))
-  );
-  wrap.querySelectorAll("[data-dec]").forEach((b) =>
-    b.addEventListener("click", () => decFromCart(b.getAttribute("data-dec")))
-  );
-  wrap.querySelectorAll("[data-rm]").forEach((b) =>
-    b.addEventListener("click", () => removeFromCart(b.getAttribute("data-rm")))
-  );
+/* ===== Drawer ===== */
+function openDrawer() {
+  el("drawer")?.classList.remove("hidden");
+  el("drawerBackdrop")?.classList.remove("hidden");
+  el("drawer")?.setAttribute("aria-hidden", "false");
+}
+function closeDrawer() {
+  el("drawer")?.classList.add("hidden");
+  el("drawerBackdrop")?.classList.add("hidden");
+  el("drawer")?.setAttribute("aria-hidden", "true");
 }
 
-/* ========= PAYMENT MODAL ========= */
-function openPay() {
-  el("payModal")?.classList.remove("hidden");
-}
-function closePay() {
-  el("payModal")?.classList.add("hidden");
-}
-
-function checkoutWithPayment(method) {
-  const map = new Map(state.products.map((p) => [p.id, p]));
-  const lines = [];
-  let total = 0;
-
-  for (const [id, qty] of Object.entries(state.cart)) {
-    const p = map.get(id);
-    if (!p) continue;
-    const sub = (p.price || 0) * qty;
-    total += sub;
-    lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
-  }
-
-  if (!lines.length) {
-    alert("Keranjang masih kosong.");
-    return;
-  }
-
-  const msg =
-    WA_TEXT_PREFIX +
-    lines.join("\n") +
-    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}\n\nNama:\nCatatan:`;
-
-  const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
-  window.open(url, "_blank");
-
-  closePay();
-}
-
-/* ========= CHECKOUT NORMAL ========= */
-function checkoutWA() {
-  const map = new Map(state.products.map((p) => [p.id, p]));
-  const lines = [];
-  let total = 0;
-
-  for (const [id, qty] of Object.entries(state.cart)) {
-    const p = map.get(id);
-    if (!p) continue;
-    const sub = (p.price || 0) * qty;
-    total += sub;
-    lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
-  }
-  function openQris() {
-  const total = cartTotal();
+/* ===== QRIS Modal ===== */
+function openQris() {
   const t = el("qrisTotalText");
-  if (t) t.textContent = rupiah(total);
-
+  if (t) t.textContent = rupiah(cartTotal());
   el("qrisModal")?.classList.remove("hidden");
   el("qrisModal")?.setAttribute("aria-hidden", "false");
 }
-
 function closeQris() {
   el("qrisModal")?.classList.add("hidden");
   el("qrisModal")?.setAttribute("aria-hidden", "true");
 }
 
-// WA khusus konfirmasi QRIS
+/* ===== WA Checkout (QRIS) ===== */
 function checkoutWA_QRIS() {
   const map = new Map(state.products.map((p) => [p.id, p]));
   const lines = [];
@@ -318,39 +280,9 @@ function checkoutWA_QRIS() {
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-
-  if (!lines.length) {
-    alert("Keranjang masih kosong.");
-    return;
-  }
-
-  const msg =
-    WA_TEXT_PREFIX +
-    lines.join("\n") +
-    `\n\nTotal: ${rupiah(total)}\n\nNama:\nMetode pembayaran:\nCatatan:`;
-
-  const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
-  window.open(url, "_blank");
-}
-
-function openDrawer() {
-  el("drawer")?.classList.remove("hidden");
-  el("drawerBackdrop")?.classList.remove("hidden");
-  el("drawer")?.setAttribute("aria-hidden", "false");
-}
-function closeDrawer() {
-  el("drawer")?.classList.add("hidden");
-  el("drawerBackdrop")?.classList.add("hidden");
-  el("drawer")?.setAttribute("aria-hidden", "true");
-}
-
-function escapeHtml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+/* ===== WA Checkout normal (tetap ada tombol Checkout via WhatsApp) ===== */
+function checkoutWA() {
+  checkoutWA_QRIS();
 }
 
 async function init() {
@@ -366,15 +298,16 @@ async function init() {
   el("checkout")?.addEventListener("click", checkoutWA);
 
   el("buyNow")?.addEventListener("click", () => {
-  if (!Object.keys(state.cart).length) {
-    alert("Keranjang masih kosong");
-    return;
-  }
-  openQris();
-});
+    if (!Object.keys(state.cart).length) {
+      alert("Keranjang masih kosong");
+      return;
+    }
+    openQris();
+  });
 
-el("confirmWA")?.addEventListener("click", checkoutWA_QRIS);
-
+  el("confirmWA")?.addEventListener("click", () => {
+    checkoutWA_QRIS();
+    // closeQris(); // kalau mau otomatis nutup modal setelah klik
   });
 
   el("clearCart")?.addEventListener("click", () => {
@@ -383,13 +316,6 @@ el("confirmWA")?.addEventListener("click", checkoutWA_QRIS);
       saveCart();
       render();
     }
-  });
-
-  // tombol metode bayar di modal
-  document.querySelectorAll("[data-pay]").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      checkoutWithPayment(btn.getAttribute("data-pay"));
-    });
   });
 
   const res = await fetch("products.json", { cache: "no-store" });
