@@ -4,16 +4,13 @@
 const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
-// ✅ URL Cloudflare Worker kamu (Tripay)
-const WORKER_URL = "https://vannnstore-payment.serli3266.workers.dev";
-
 /* ===============================
    STATE
 ================================ */
 const state = {
   products: [],
   cart: loadCart(), // { [id]: qty }
-  lastOrder: null // simpan info order terakhir untuk konfirmasi WA
+  lastOrder: null // { orderId, amount, reference }
 };
 
 const el = (id) => document.getElementById(id);
@@ -26,7 +23,7 @@ function rupiah(n) {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0
-  }).format(n);
+  }).format(Number(n || 0));
 }
 
 function loadCart() {
@@ -69,10 +66,10 @@ function escapeHtml(s) {
 
 /* ===============================
    UI: TOAST (Notifikasi tengah)
-   - Pastikan kamu punya elemen:
-     <div id="toast" class="toast hidden">
-        <div class="toast-box">✅ Ditambahkan ke keranjang</div>
-     </div>
+   butuh HTML:
+   <div id="toast" class="toast hidden">
+     <div class="toast-box">✅ Ditambahkan ke keranjang</div>
+   </div>
 ================================ */
 function showToast(text = "✅ Ditambahkan ke keranjang") {
   const toast = document.getElementById("toast");
@@ -238,9 +235,9 @@ function render() {
       }
       <div class="card-foot">
         <div class="stock">${inStock ? `Stok: ${p.stock}` : `Stok habis`}</div>
-        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(
-      p.id
-    )}">+ Keranjang</button>
+        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">
+          + Keranjang
+        </button>
       </div>
     `;
 
@@ -314,7 +311,7 @@ function closeQris() {
 }
 
 /* ===============================
-   WHATSAPP MESSAGE (order detail)
+   ORDER LINES
 ================================ */
 function buildOrderLines() {
   const map = new Map(state.products.map((p) => [p.id, p]));
@@ -339,18 +336,23 @@ function checkoutWA(method = "QRIS", extra = "") {
     return;
   }
 
-  const orderText = state.lastOrder?.orderId ? `\nOrder ID: ${state.lastOrder.orderId}` : "";
+  const orderIdText = state.lastOrder?.orderId ? `\nOrder ID: ${state.lastOrder.orderId}` : "";
+  const refText = state.lastOrder?.reference ? `\nReference: ${state.lastOrder.reference}` : "";
+
   const msg =
     WA_TEXT_PREFIX +
     lines.join("\n") +
-    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}${orderText}\n${extra}\n\nNama:\nCatatan:`;
+    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}${orderIdText}${refText}\n${extra}\n\nNama:\nCatatan:`;
 
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
 /* ===============================
    TRIPAY QRIS: CREATE PAYMENT
-   - tombol "Beli Sekarang" memanggil ini
+   BUTUH Cloudflare Route:
+   - vannnstore.my.id/api/*
+   Endpoint worker:
+   - POST /api/create
 ================================ */
 async function openQrisPayment() {
   if (!Object.keys(state.cart).length) {
@@ -361,41 +363,60 @@ async function openQrisPayment() {
   const orderId = "ORDER-" + Date.now();
   const amount = cartTotal();
 
-  // simpan order id utk konfirmasi WA
-  state.lastOrder = { orderId, amount };
+  // simpan order info utk konfirmasi WA
+  state.lastOrder = { orderId, amount, reference: null };
 
   // tampilkan modal + total
   const totalEl = el("qrisTotalText");
   if (totalEl) totalEl.textContent = rupiah(amount);
 
-  // set QR placeholder dulu (biar gak kosong)
+  // kosongkan gambar dulu (biar gak nampilin QR lama)
   const imgEl = document.querySelector(".qris-img img");
-  if (imgEl)if (imgEl) imgEl.src = "";
+  if (imgEl) imgEl.src = "";
 
   openQrisModal();
 
+  // kirim items biar rapi di Tripay
+  const map = new Map(state.products.map((p) => [p.id, p]));
+  const items = Object.entries(state.cart).map(([id, qty]) => {
+    const p = map.get(id);
+    return {
+      sku: id,
+      name: p?.name || id,
+      price: Number(p?.price || 0),
+      quantity: Number(qty || 1)
+    };
+  });
+
   try {
-    const res = await fetch(WORKER_URL, {
+    const res = await fetch("/api/create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: orderId, amount })
+      body: JSON.stringify({
+        order_id: orderId,
+        amount,
+        items,
+        return_url: "https://vannnstore.my.id",
+        callback_url: "https://vannnstore.my.id/api/callback"
+      })
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
 
-    // data.success harus true
-    if (!data || data.success !== true) {
+    if (!res.ok || !data || data.success !== true) {
       alert("Gagal membuat QRIS (Tripay). Cek console.");
-      console.log("Tripay response:", data);
+      console.log("Create QRIS error:", data);
       return;
     }
 
-    // tampilkan QRIS dari Tripay
-    // biasanya qr_url / qr_url bisa berupa link gambar QR
-    const qrUrl = data?.data?.qr_url || data?.data?.qr_url; // aman
+    const qrUrl = data?.data?.qr_url || null;
+    const reference = data?.data?.reference || null;
+
+    state.lastOrder.reference = reference;
+
     if (!qrUrl) {
-      alert("QRIS tidak ditemukan di response Tripay. Cek console.");
-      console.log("Tripay response:", data);
+      alert("QRIS tidak ditemukan di response. Cek console.");
+      console.log("No qr_url:", data);
       return;
     }
 
@@ -420,16 +441,15 @@ async function init() {
   el("closeCart")?.addEventListener("click", closeDrawer);
   el("drawerBackdrop")?.addEventListener("click", closeDrawer);
 
-  // tombol checkout biasa -> WA
+  // Checkout WA biasa
   el("checkout")?.addEventListener("click", () => checkoutWA("WhatsApp"));
 
-  // ✅ tombol Beli Sekarang -> Tripay QRIS
+  // Beli sekarang -> buat QRIS (Tripay)
   el("buyNow")?.addEventListener("click", openQrisPayment);
 
-  // tombol konfirmasi -> WA dengan info QRIS
+  // Konfirmasi WA setelah bayar
   el("confirmWA")?.addEventListener("click", () => {
     checkoutWA("QRIS", "Saya sudah bayar, mohon dicek ya.");
-    // closeQris(); // kalau mau auto tutup modal
   });
 
   el("clearCart")?.addEventListener("click", () => {
