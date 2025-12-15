@@ -1,13 +1,26 @@
+/* ===============================
+   CONFIG
+================================ */
 const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
+// ✅ URL Cloudflare Worker kamu (Tripay)
+const WORKER_URL = "https://vannnstore-payment.serli3266.workers.dev";
+
+/* ===============================
+   STATE
+================================ */
 const state = {
   products: [],
-  cart: loadCart() // { [id]: qty }
+  cart: loadCart(), // { [id]: qty }
+  lastOrder: null // simpan info order terakhir untuk konfirmasi WA
 };
 
 const el = (id) => document.getElementById(id);
 
+/* ===============================
+   HELPERS
+================================ */
 function rupiah(n) {
   return new Intl.NumberFormat("id-ID", {
     style: "currency",
@@ -54,14 +67,43 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+/* ===============================
+   UI: TOAST (Notifikasi tengah)
+   - Pastikan kamu punya elemen:
+     <div id="toast" class="toast hidden">
+        <div class="toast-box">✅ Ditambahkan ke keranjang</div>
+     </div>
+================================ */
+function showToast(text = "✅ Ditambahkan ke keranjang") {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+
+  const box = toast.querySelector(".toast-box");
+  if (box) box.textContent = text;
+
+  toast.classList.remove("hidden");
+
+  // reset animasi
+  if (box) {
+    box.style.animation = "none";
+    box.offsetHeight;
+    box.style.animation = null;
+  }
+
+  setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 1400);
+}
+
+/* ===============================
+   CATEGORIES / FILTER
+================================ */
 function buildCategoryOptions() {
   const sel = el("category");
   if (!sel) return;
 
   const cats = Array.from(
-    new Set(
-      state.products.map((p) => normalizeCategory(p.category)).filter(Boolean)
-    )
+    new Set(state.products.map((p) => normalizeCategory(p.category)).filter(Boolean))
   ).sort((a, b) => a.localeCompare(b));
 
   sel.innerHTML =
@@ -103,6 +145,9 @@ function filteredProducts() {
   return items;
 }
 
+/* ===============================
+   CART RENDER
+================================ */
 function renderCartItems() {
   const wrap = el("cartItems");
   if (!wrap) return;
@@ -150,6 +195,9 @@ function renderCartItems() {
   );
 }
 
+/* ===============================
+   MAIN RENDER
+================================ */
 function render() {
   const year = el("year");
   if (year) year.textContent = new Date().getFullYear();
@@ -183,10 +231,16 @@ function render() {
       <div class="name">${escapeHtml(p.name || "Tanpa Nama")}</div>
       <p class="price">${rupiah(p.price || 0)}</p>
       <div class="unit">${escapeHtml(p.unit || "")}</div>
-      ${notes.length ? `<ul class="notes">${notes.map(n=>`<li>${escapeHtml(n)}</li>`).join("")}</ul>` : ``}
+      ${
+        notes.length
+          ? `<ul class="notes">${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+          : ``
+      }
       <div class="card-foot">
         <div class="stock">${inStock ? `Stok: ${p.stock}` : `Stok habis`}</div>
-        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">+ Keranjang</button>
+        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(
+      p.id
+    )}">+ Keranjang</button>
       </div>
     `;
 
@@ -209,28 +263,15 @@ function render() {
   renderCartItems();
 }
 
+/* ===============================
+   CART ACTIONS
+================================ */
 function addToCart(id) {
   state.cart[id] = (state.cart[id] || 0) + 1;
   saveCart();
   render();
-  showToast(); 
+  showToast("✅ Ditambahkan ke keranjang");
 }
-function showToast(){
-  const toast = document.getElementById("toast");
-  if (!toast) return;
-
-  toast.classList.remove("hidden");
-
-  const box = toast.querySelector(".toast-box");
-  box.style.animation = "none";
-  box.offsetHeight; // reset animasi
-  box.style.animation = null;
-
-  setTimeout(() => {
-    toast.classList.add("hidden");
-  }, 1400);
-}
-
 
 function decFromCart(id) {
   const cur = state.cart[id] || 0;
@@ -246,7 +287,9 @@ function removeFromCart(id) {
   render();
 }
 
-/* ===== Drawer ===== */
+/* ===============================
+   DRAWER
+================================ */
 function openDrawer() {
   el("drawer")?.classList.remove("hidden");
   el("drawerBackdrop")?.classList.remove("hidden");
@@ -258,10 +301,10 @@ function closeDrawer() {
   el("drawer")?.setAttribute("aria-hidden", "true");
 }
 
-/* ===== QRIS Modal ===== */
-function openQris() {
-  const t = el("qrisTotalText");
-  if (t) t.textContent = rupiah(cartTotal());
+/* ===============================
+   QRIS MODAL
+================================ */
+function openQrisModal() {
   el("qrisModal")?.classList.remove("hidden");
   el("qrisModal")?.setAttribute("aria-hidden", "false");
 }
@@ -270,8 +313,10 @@ function closeQris() {
   el("qrisModal")?.setAttribute("aria-hidden", "true");
 }
 
-/* ===== WA Checkout (QRIS) ===== */
-function checkoutWA_QRIS() {
+/* ===============================
+   WHATSAPP MESSAGE (order detail)
+================================ */
+function buildOrderLines() {
   const map = new Map(state.products.map((p) => [p.id, p]));
   const lines = [];
   let total = 0;
@@ -284,24 +329,87 @@ function checkoutWA_QRIS() {
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
   }
 
+  return { lines, total };
+}
+
+function checkoutWA(method = "QRIS", extra = "") {
+  const { lines, total } = buildOrderLines();
   if (!lines.length) {
     alert("Keranjang masih kosong.");
     return;
   }
 
+  const orderText = state.lastOrder?.orderId ? `\nOrder ID: ${state.lastOrder.orderId}` : "";
   const msg =
     WA_TEXT_PREFIX +
     lines.join("\n") +
-    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: QRIS\n\nNama:\nBukti transfer (jika ada):\nCatatan:`;
+    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}${orderText}\n${extra}\n\nNama:\nCatatan:`;
 
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
-/* ===== WA Checkout normal (tetap ada tombol Checkout via WhatsApp) ===== */
-function checkoutWA() {
-  checkoutWA_QRIS();
+/* ===============================
+   TRIPAY QRIS: CREATE PAYMENT
+   - tombol "Beli Sekarang" memanggil ini
+================================ */
+async function openQrisPayment() {
+  if (!Object.keys(state.cart).length) {
+    alert("Keranjang masih kosong");
+    return;
+  }
+
+  const orderId = "ORDER-" + Date.now();
+  const amount = cartTotal();
+
+  // simpan order id utk konfirmasi WA
+  state.lastOrder = { orderId, amount };
+
+  // tampilkan modal + total
+  const totalEl = el("qrisTotalText");
+  if (totalEl) totalEl.textContent = rupiah(amount);
+
+  // set QR placeholder dulu (biar gak kosong)
+  const imgEl = document.querySelector(".qris-img img");
+  if (imgEl) imgEl.src = "assets/images/loading.png"; // opsional: boleh hapus kalau gak ada
+
+  openQrisModal();
+
+  try {
+    const res = await fetch(WORKER_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId, amount })
+    });
+
+    const data = await res.json();
+
+    // data.success harus true
+    if (!data || data.success !== true) {
+      alert("Gagal membuat QRIS (Tripay). Cek console.");
+      console.log("Tripay response:", data);
+      return;
+    }
+
+    // tampilkan QRIS dari Tripay
+    // biasanya qr_url / qr_url bisa berupa link gambar QR
+    const qrUrl = data?.data?.qr_url || data?.data?.qr_url; // aman
+    if (!qrUrl) {
+      alert("QRIS tidak ditemukan di response Tripay. Cek console.");
+      console.log("Tripay response:", data);
+      return;
+    }
+
+    if (imgEl) imgEl.src = qrUrl;
+
+  } catch (err) {
+    alert("Koneksi ke server gagal (Worker/Tripay).");
+    console.error(err);
+  }
 }
 
+/* ===============================
+   INIT
+================================ */
 async function init() {
   ["search", "onlyInStock", "category", "sort"].forEach((id) => {
     el(id)?.addEventListener("input", render);
@@ -312,19 +420,16 @@ async function init() {
   el("closeCart")?.addEventListener("click", closeDrawer);
   el("drawerBackdrop")?.addEventListener("click", closeDrawer);
 
-  el("checkout")?.addEventListener("click", checkoutWA);
+  // tombol checkout biasa -> WA
+  el("checkout")?.addEventListener("click", () => checkoutWA("WhatsApp"));
 
-  el("buyNow")?.addEventListener("click", () => {
-    if (!Object.keys(state.cart).length) {
-      alert("Keranjang masih kosong");
-      return;
-    }
-    openQris();
-  });
+  // ✅ tombol Beli Sekarang -> Tripay QRIS
+  el("buyNow")?.addEventListener("click", openQrisPayment);
 
+  // tombol konfirmasi -> WA dengan info QRIS
   el("confirmWA")?.addEventListener("click", () => {
-    checkoutWA_QRIS();
-    // closeQris(); // kalau mau otomatis nutup modal setelah klik
+    checkoutWA("QRIS", "Saya sudah bayar, mohon dicek ya.");
+    // closeQris(); // kalau mau auto tutup modal
   });
 
   el("clearCart")?.addEventListener("click", () => {
@@ -335,6 +440,7 @@ async function init() {
     }
   });
 
+  // load products
   const res = await fetch("products.json", { cache: "no-store" });
   state.products = await res.json();
 
