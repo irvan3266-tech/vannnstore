@@ -370,7 +370,7 @@ async function openQrisPayment() {
 
   // set QR placeholder dulu (biar gak kosong)
   const imgEl = document.querySelector(".qris-img img");
-  if (imgEl) imgEl.src = "assets/images/loading.png"; // opsional: boleh hapus kalau gak ada
+  if (imgEl)if (imgEl) imgEl.src = "";
 
   openQrisModal();
 
