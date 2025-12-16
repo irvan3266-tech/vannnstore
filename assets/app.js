@@ -4,16 +4,16 @@
 const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
-// Endpoint Worker (via route domain kamu)
-const API_BASE = "/api"; // -> /api/create, /api/callback
+// Endpoint API (di-route ke Cloudflare Worker)
+const API_CREATE = "/api/create";
 
 /* ===============================
    STATE
 ================================ */
 const state = {
   products: [],
-  cart: loadCart(), // { [id]: qty }
-  lastOrder: null // { merchant_ref, amount, reference }
+  cart: loadCart(),     // { [id]: qty }
+  lastOrder: null       // { orderId, amount, reference }
 };
 
 const el = (id) => document.getElementById(id);
@@ -68,21 +68,21 @@ function escapeHtml(s) {
 }
 
 /* ===============================
-   UI: TOAST
-   butuh HTML:
+   TOAST (notif tengah)
+   BUTUH HTML:
    <div id="toast" class="toast hidden">
      <div class="toast-box">✅ Ditambahkan ke keranjang</div>
    </div>
 ================================ */
 function showToast(text = "✅ Ditambahkan ke keranjang") {
-  const toast = document.getElementById("toast");
+  const toast = el("toast");
   if (!toast) return;
-
   const box = toast.querySelector(".toast-box");
   if (box) box.textContent = text;
 
   toast.classList.remove("hidden");
 
+  // reset animasi
   if (box) {
     box.style.animation = "none";
     box.offsetHeight;
@@ -93,7 +93,7 @@ function showToast(text = "✅ Ditambahkan ke keranjang") {
 }
 
 /* ===============================
-   FILTER UI
+   CATEGORIES / FILTER
 ================================ */
 function buildCategoryOptions() {
   const sel = el("category");
@@ -109,11 +109,8 @@ function buildCategoryOptions() {
 }
 
 function filteredProducts() {
-  const searchEl = el("search");
-  const q = (searchEl ? searchEl.value : "").trim().toLowerCase();
-
-  const onlyStockEl = el("onlyInStock");
-  const onlyStock = !!(onlyStockEl && onlyStockEl.checked);
+  const q = (el("search")?.value || "").trim().toLowerCase();
+  const onlyStock = !!el("onlyInStock")?.checked;
 
   let items = state.products.slice();
 
@@ -130,7 +127,7 @@ function filteredProducts() {
 
   if (onlyStock) items = items.filter((p) => (p.stock ?? 0) > 0);
 
-  const sort = el("sort") ? el("sort").value : "popular";
+  const sort = el("sort")?.value || "popular";
   if (sort === "low") items.sort((a, b) => (a.price || 0) - (b.price || 0));
   else if (sort === "high") items.sort((a, b) => (b.price || 0) - (a.price || 0));
   else if (sort === "az") items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -202,8 +199,8 @@ function render() {
 
   grid.innerHTML = "";
 
-  if (!items.length) empty && empty.classList.remove("hidden");
-  else empty && empty.classList.add("hidden");
+  if (!items.length) empty?.classList.remove("hidden");
+  else empty?.classList.add("hidden");
 
   for (const p of items) {
     const card = document.createElement("div");
@@ -232,7 +229,6 @@ function render() {
         </button>
       </div>
     `;
-
     grid.appendChild(card);
   }
 
@@ -240,14 +236,9 @@ function render() {
     btn.addEventListener("click", () => addToCart(btn.getAttribute("data-add")));
   });
 
-  const cartCountEl = el("cartCount");
-  if (cartCountEl) cartCountEl.textContent = cartCount();
-
-  const cartMeta = el("cartMeta");
-  if (cartMeta) cartMeta.textContent = `${cartCount()} item`;
-
-  const cartTotalEl = el("cartTotal");
-  if (cartTotalEl) cartTotalEl.textContent = rupiah(cartTotal());
+  el("cartCount") && (el("cartCount").textContent = String(cartCount()));
+  el("cartMeta") && (el("cartMeta").textContent = `${cartCount()} item`);
+  el("cartTotal") && (el("cartTotal").textContent = rupiah(cartTotal()));
 
   renderCartItems();
 }
@@ -315,7 +306,6 @@ function buildOrderLines() {
     total += sub;
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
   }
-
   return { lines, total };
 }
 
@@ -323,39 +313,38 @@ function checkoutWA(method = "QRIS", extra = "") {
   const { lines, total } = buildOrderLines();
   if (!lines.length) return alert("Keranjang masih kosong.");
 
-  const ref = state.lastOrder?.reference ? `\nReference: ${state.lastOrder.reference}` : "";
-  const mref = state.lastOrder?.merchant_ref ? `\nOrder ID: ${state.lastOrder.merchant_ref}` : "";
+  const orderIdText = state.lastOrder?.orderId ? `\nOrder ID: ${state.lastOrder.orderId}` : "";
+  const refText = state.lastOrder?.reference ? `\nReference: ${state.lastOrder.reference}` : "";
 
   const msg =
     WA_TEXT_PREFIX +
     lines.join("\n") +
-    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}${mref}${ref}\n${extra}\n\nNama:\nCatatan:`;
+    `\n\nTotal: ${rupiah(total)}\nMetode Pembayaran: ${method}${orderIdText}${refText}\n${extra}\n\nNama:\nCatatan:`;
 
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
 /* ===============================
-   TRIPAY QRIS (via Worker route)
-   POST /api/create
+   TRIPAY QRIS: CREATE PAYMENT
 ================================ */
 async function openQrisPayment() {
   if (!Object.keys(state.cart).length) return alert("Keranjang masih kosong");
 
-  const merchant_ref = "ORDER-" + Date.now();
+  const orderId = "ORDER-" + Date.now();
   const amount = cartTotal();
 
-  state.lastOrder = { merchant_ref, amount, reference: null };
+  state.lastOrder = { orderId, amount, reference: null };
 
-  const totalEl = el("qrisTotalText");
-  if (totalEl) totalEl.textContent = rupiah(amount);
+  el("qrisTotalText") && (el("qrisTotalText").textContent = rupiah(amount));
 
   const imgEl = document.querySelector(".qris-img img");
-  if (imgEl) imgEl.src = "assets/images/loading.png"; // optional (kalau ga ada file ini, hapus baris ini)
+  if (imgEl) imgEl.src = ""; // kosongin biar gak nampilin QR lama
 
   openQrisModal();
 
+  // items untuk Tripay
   const map = new Map(state.products.map((p) => [p.id, p]));
-  const order_items = Object.entries(state.cart).map(([id, qty]) => {
+  const items = Object.entries(state.cart).map(([id, qty]) => {
     const p = map.get(id);
     return {
       sku: id,
@@ -366,43 +355,42 @@ async function openQrisPayment() {
   });
 
   try {
-    const res = await fetch(`${API_BASE}/create`, {
+    const res = await fetch(API_CREATE, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        method: "QRIS",
-        merchant_ref,
-        amount,
-        order_items
-      })
+      body: JSON.stringify({ order_id: orderId, amount, items })
     });
 
-    const data = await res.json().catch(() => null);
+    // kalau server balas bukan JSON, tetep kebaca
+    const raw = await res.text();
+    let data = null;
+    try { data = JSON.parse(raw); } catch {}
 
     if (!res.ok || !data || data.success !== true) {
-      console.log("Create QRIS failed:", { status: res.status, data });
-      alert("Gagal membuat QRIS. Cek console.");
-      if (imgEl) imgEl.src = "assets/images/qris.jpeg"; // fallback QR statis (optional)
+      console.log("Create QRIS failed:", { status: res.status, raw, data });
+      closeQris(); // ✅ biar modal gak “ngunci” layar → keranjang bisa dipencet lagi
+      alert("Gagal membuat QRIS. Cek console (Create QRIS failed).");
       return;
     }
 
-    // Tripay biasa ngasih: reference + qr_url (tergantung channel)
-    const qrUrl = data?.data?.qr_url || data?.data?.qr_url;
-    const reference = data?.data?.reference || null;
+    const qrUrl = data?.data?.qr_url || data?.data?.qr_image || data?.data?.qr;
+    const reference = data?.data?.reference || data?.data?.ref;
 
-    state.lastOrder.reference = reference;
+    state.lastOrder.reference = reference || null;
 
     if (!qrUrl) {
-      console.log("Response OK tapi qr_url tidak ada:", data);
-      alert("QRIS tidak ditemukan. Cek console.");
+      console.log("No QR url in response:", data);
+      closeQris();
+      alert("QRIS tidak ditemukan di response. Cek console.");
       return;
     }
 
     if (imgEl) imgEl.src = qrUrl;
+
   } catch (err) {
     console.error(err);
+    closeQris(); // ✅ jangan biarin modal nutupin layar
     alert("Koneksi ke server gagal. Cek console.");
-    if (imgEl) imgEl.src = "assets/images/qris.jpeg"; // fallback optional
   }
 }
 
@@ -415,14 +403,11 @@ async function init() {
     el(id)?.addEventListener("change", render);
   });
 
-  // ✅ ini yang bikin tombol keranjang bisa dipencet
   el("openCart")?.addEventListener("click", openDrawer);
   el("closeCart")?.addEventListener("click", closeDrawer);
   el("drawerBackdrop")?.addEventListener("click", closeDrawer);
 
   el("checkout")?.addEventListener("click", () => checkoutWA("WhatsApp"));
-
-  // ✅ Beli sekarang -> bikin QRIS Tripay
   el("buyNow")?.addEventListener("click", openQrisPayment);
 
   el("confirmWA")?.addEventListener("click", () => {
@@ -444,7 +429,10 @@ async function init() {
   render();
 }
 
-init().catch((err) => {
-  console.error(err);
-  alert("Gagal memuat produk. Cek products.json dan app.js.");
+// pastiin jalan setelah DOM siap
+document.addEventListener("DOMContentLoaded", () => {
+  init().catch((err) => {
+    console.error(err);
+    alert("Gagal memuat produk. Cek products.json dan app.js.");
+  });
 });
