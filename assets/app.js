@@ -4,6 +4,10 @@
 const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
+// ✅ Google Sheets CSV (pakai gviz). Kalau sheet produk bukan gid=0, ganti gid-nya.
+const SHEET_CSV_URL =
+  "https://docs.google.com/spreadsheets/d/12OfXcpE5Me4jRu6_RrYmIL5miG8zykdAUIBH55VVtlk/gviz/tq?tqx=out:csv&gid=0";
+
 /* ===============================
    STATE
 ================================ */
@@ -60,6 +64,88 @@ function escapeHtml(s) {
 }
 
 /* ===============================
+   CSV PARSER (Google Sheets)
+================================ */
+function parseCSV(text) {
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    const next = text[i + 1];
+
+    if (ch === '"') {
+      if (inQuotes && next === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === "," && !inQuotes) {
+      row.push(cur);
+      cur = "";
+    } else if ((ch === "\n" || ch === "\r") && !inQuotes) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(cur);
+      rows.push(row);
+      row = [];
+      cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+
+  if (cur.length || row.length) {
+    row.push(cur);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
+function rowsToProducts(rows) {
+  if (!rows || !rows.length) return [];
+
+  const header = rows[0].map((h) => String(h || "").trim().toLowerCase());
+  const idx = (name) => header.indexOf(name);
+
+  const iId = idx("id");
+  const iName = idx("name");
+  const iCategory = idx("category");
+  const iPrice = idx("price");
+  const iUnit = idx("unit");
+  const iStock = idx("stock");
+  const iImage = idx("image");
+  const iBadge = idx("badge");
+  const iNotes = idx("notes");
+
+  return rows
+    .slice(1)
+    .filter((r) => r && r.some((x) => String(x || "").trim() !== ""))
+    .map((r) => {
+      const notesRaw = (r[iNotes] ?? "").toString().trim();
+      const notes = notesRaw
+        ? notesRaw.split("||").map((x) => x.trim()).filter(Boolean)
+        : [];
+
+      return {
+        id: (r[iId] ?? "").toString().trim(),
+        name: (r[iName] ?? "").toString().trim(),
+        category: (r[iCategory] ?? "").toString().trim(),
+        price: Number((r[iPrice] ?? 0).toString().replace(/[^\d]/g, "")) || 0,
+        unit: (r[iUnit] ?? "").toString().trim(),
+        stock: Number((r[iStock] ?? 0).toString().replace(/[^\d]/g, "")) || 0,
+        image: (r[iImage] ?? "").toString().trim(),
+        badge: (r[iBadge] ?? "").toString().trim(),
+        notes
+      };
+    })
+    .filter((p) => p.id);
+}
+
+/* ===============================
    TOAST
 ================================ */
 function showToast(text = "✅ Ditambahkan ke keranjang") {
@@ -90,13 +176,13 @@ function render() {
 
     card.innerHTML = `
       <div class="card-img">
-        <img src="${escapeHtml(img)}">
+        <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy">
       </div>
-      <div class="name">${escapeHtml(p.name)}</div>
+      <div class="name">${escapeHtml(p.name || "")}</div>
       <p class="price">${rupiah(p.price)}</p>
       <div class="card-foot">
         <span class="stock">${inStock ? `Stok: ${p.stock}` : "Stok habis"}</span>
-        <button class="smallbtn" ${inStock ? "" : "disabled"} data-add="${p.id}">
+        <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">
           + Keranjang
         </button>
       </div>
@@ -105,7 +191,7 @@ function render() {
     grid.appendChild(card);
   }
 
-  grid.querySelectorAll("[data-add]").forEach(btn => {
+  grid.querySelectorAll("[data-add]").forEach((btn) => {
     btn.onclick = () => addToCart(btn.dataset.add);
   });
 
@@ -130,7 +216,7 @@ function renderCartItems() {
   const wrap = el("cartItems");
   wrap.innerHTML = "";
 
-  const map = new Map(state.products.map(p => [p.id, p]));
+  const map = new Map(state.products.map((p) => [p.id, p]));
 
   if (!Object.keys(state.cart).length) {
     wrap.innerHTML = `<p class="muted">Keranjang kosong</p>`;
@@ -143,7 +229,7 @@ function renderCartItems() {
 
     wrap.innerHTML += `
       <div class="cart-item">
-        <b>${p.name}</b><br>
+        <b>${escapeHtml(p.name)}</b><br>
         ${rupiah(p.price)} x ${qty}
       </div>
     `;
@@ -182,13 +268,14 @@ function closeQris() {
    WHATSAPP
 ================================ */
 function checkoutWA() {
-  const map = new Map(state.products.map(p => [p.id, p]));
+  const map = new Map(state.products.map((p) => [p.id, p]));
   let lines = [];
   let total = 0;
 
   for (const [id, qty] of Object.entries(state.cart)) {
     const p = map.get(id);
-    const sub = p.price * qty;
+    if (!p) continue;
+    const sub = (p.price || 0) * qty;
     total += sub;
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
   }
@@ -198,10 +285,7 @@ function checkoutWA() {
     lines.join("\n") +
     `\n\nTotal: ${rupiah(total)}\nPembayaran: QRIS\n\nNama:\nCatatan:`;
 
-  window.open(
-    `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`,
-    "_blank"
-  );
+  window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
 }
 
 /* ===============================
@@ -216,8 +300,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   el("confirmWA").onclick = checkoutWA;
   el("checkout").onclick = checkoutWA;
 
-  const res = await fetch("products.json");
-  state.products = await res.json();
+  // ✅ Load produk dari Google Sheets CSV
+  try {
+    const csvRes = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+    const csvText = await csvRes.text();
+    const rows = parseCSV(csvText);
+    state.products = rowsToProducts(rows);
+
+    if (!state.products.length) {
+      alert("Produk kosong / gagal terbaca. Pastikan sheet publik (Viewer) & kolom header benar.");
+      console.log("CSV RAW:", csvText);
+    }
+
+  } catch (e) {
+    alert("Gagal mengambil data dari Google Sheets. Pastikan sheet public (Viewer).");
+    console.error(e);
+  }
 
   render();
 });
+
+// dipakai tombol X modal di HTML kamu
+window.closeQris = closeQris;
