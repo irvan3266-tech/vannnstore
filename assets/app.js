@@ -4,7 +4,7 @@
 const WA_NUMBER = "6289505674504";
 const WA_TEXT_PREFIX = "Halo admin vannnstore, saya mau order:\n\n";
 
-// ✅ Google Sheets CSV (pakai gviz). Kalau sheet produk bukan gid=0, ganti gid-nya.
+// Google Sheets CSV (gid sesuaikan kalau tab produk bukan gid=0)
 const SHEET_CSV_URL =
   "https://docs.google.com/spreadsheets/d/12OfXcpE5Me4jRu6_RrYmIL5miG8zykdAUIBH55VVtlk/gviz/tq?tqx=out:csv&gid=0";
 
@@ -13,7 +13,7 @@ const SHEET_CSV_URL =
 ================================ */
 const state = {
   products: [],
-  cart: loadCart()
+  cart: loadCart() // { [id]: qty }
 };
 
 const el = (id) => document.getElementById(id);
@@ -61,6 +61,44 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+/* image resolver:
+   - kalau isinya "gmail.png" => jadi "assets/images/gmail.png"
+   - kalau sudah "assets/images/..." biarkan
+   - kalau URL https://... biarkan
+*/
+function resolveImageUrl(raw) {
+  const s = String(raw || "").trim();
+  if (!s) return "assets/images/no-image.png";
+  if (/^https?:\/\//i.test(s)) return s;
+
+  // normalize backslashes and spaces
+  const clean = s.replaceAll("\\", "/").replaceAll(" ", "%20");
+
+  if (clean.startsWith("assets/")) return clean;
+  if (clean.startsWith("/assets/")) return clean.slice(1);
+
+  // kalau cuma nama file
+  return `assets/images/${clean}`;
+}
+
+/* ===============================
+   TOAST
+   butuh HTML:
+   <div id="toast" class="toast hidden">
+     <div class="toast-box">✅ Ditambahkan ke keranjang</div>
+   </div>
+================================ */
+function showToast(text = "✅ Ditambahkan ke keranjang") {
+  const toast = el("toast");
+  if (!toast) return;
+
+  const box = toast.querySelector(".toast-box");
+  if (box) box.textContent = text;
+
+  toast.classList.remove("hidden");
+  setTimeout(() => toast.classList.add("hidden"), 1300);
 }
 
 /* ===============================
@@ -146,19 +184,6 @@ function rowsToProducts(rows) {
 }
 
 /* ===============================
-   TOAST
-================================ */
-function showToast(text = "✅ Ditambahkan ke keranjang") {
-  const toast = el("toast");
-  if (!toast) return;
-
-  toast.querySelector(".toast-box").textContent = text;
-  toast.classList.remove("hidden");
-
-  setTimeout(() => toast.classList.add("hidden"), 1300);
-}
-
-/* ===============================
    RENDER PRODUK
 ================================ */
 function render() {
@@ -172,11 +197,12 @@ function render() {
     card.className = "card";
 
     const inStock = (p.stock ?? 0) > 0;
-    const img = p.image || "assets/images/no-image.png";
+    const img = resolveImageUrl(p.image);
 
     card.innerHTML = `
       <div class="card-img">
-        <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy">
+        <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy"
+             onerror="this.onerror=null;this.src='assets/images/no-image.png';">
       </div>
       <div class="name">${escapeHtml(p.name || "")}</div>
       <p class="price">${rupiah(p.price)}</p>
@@ -195,15 +221,16 @@ function render() {
     btn.onclick = () => addToCart(btn.dataset.add);
   });
 
-  el("cartCount").textContent = cartCount();
-  el("cartTotal").textContent = rupiah(cartTotal());
-  el("cartMeta").textContent = `${cartCount()} item`;
+  const cc = cartCount();
+  if (el("cartCount")) el("cartCount").textContent = cc;
+  if (el("cartTotal")) el("cartTotal").textContent = rupiah(cartTotal());
+  if (el("cartMeta")) el("cartMeta").textContent = `${cc} item`;
 
   renderCartItems();
 }
 
 /* ===============================
-   CART
+   CART ACTIONS
 ================================ */
 function addToCart(id) {
   state.cart[id] = (state.cart[id] || 0) + 1;
@@ -212,40 +239,98 @@ function addToCart(id) {
   showToast();
 }
 
+function incCart(id) {
+  state.cart[id] = (state.cart[id] || 0) + 1;
+  saveCart();
+  render();
+}
+
+function decCart(id) {
+  const cur = state.cart[id] || 0;
+  if (cur <= 1) delete state.cart[id];
+  else state.cart[id] = cur - 1;
+  saveCart();
+  render();
+}
+
+function removeCart(id) {
+  delete state.cart[id];
+  saveCart();
+  render();
+}
+
+function clearCart() {
+  if (!Object.keys(state.cart).length) return;
+  if (!confirm("Kosongkan keranjang?")) return;
+  state.cart = {};
+  saveCart();
+  render();
+}
+
+/* ===============================
+   CART RENDER (dengan + / - / hapus)
+================================ */
 function renderCartItems() {
   const wrap = el("cartItems");
+  if (!wrap) return;
+
   wrap.innerHTML = "";
 
   const map = new Map(state.products.map((p) => [p.id, p]));
+  const ids = Object.keys(state.cart);
 
-  if (!Object.keys(state.cart).length) {
+  if (!ids.length) {
     wrap.innerHTML = `<p class="muted">Keranjang kosong</p>`;
     return;
   }
 
-  for (const [id, qty] of Object.entries(state.cart)) {
+  for (const id of ids) {
     const p = map.get(id);
     if (!p) continue;
 
-    wrap.innerHTML += `
-      <div class="cart-item">
-        <b>${escapeHtml(p.name)}</b><br>
-        ${rupiah(p.price)} x ${qty}
+    const qty = state.cart[id];
+
+    const div = document.createElement("div");
+    div.className = "cart-item";
+    div.innerHTML = `
+      <div class="cart-name">${escapeHtml(p.name)}</div>
+      <div class="cart-meta">${rupiah(p.price)} • ${escapeHtml(p.category || "")}</div>
+
+      <div class="qtyrow">
+        <div class="qtyctrl">
+          <button class="qbtn" type="button" data-dec="${escapeHtml(id)}">−</button>
+          <strong>${qty}</strong>
+          <button class="qbtn" type="button" data-inc="${escapeHtml(id)}">+</button>
+        </div>
+        <button class="btn ghost" type="button" data-rm="${escapeHtml(id)}">Hapus</button>
       </div>
     `;
+    wrap.appendChild(div);
   }
+
+  wrap.querySelectorAll("[data-inc]").forEach((b) =>
+    b.addEventListener("click", () => incCart(b.getAttribute("data-inc")))
+  );
+  wrap.querySelectorAll("[data-dec]").forEach((b) =>
+    b.addEventListener("click", () => decCart(b.getAttribute("data-dec")))
+  );
+  wrap.querySelectorAll("[data-rm]").forEach((b) =>
+    b.addEventListener("click", () => removeCart(b.getAttribute("data-rm")))
+  );
 }
 
 /* ===============================
    DRAWER
 ================================ */
 function openDrawer() {
-  el("drawer").classList.remove("hidden");
-  el("drawerBackdrop").classList.remove("hidden");
+  el("drawer")?.classList.remove("hidden");
+  el("drawerBackdrop")?.classList.remove("hidden");
+  el("drawer")?.setAttribute("aria-hidden", "false");
 }
 function closeDrawer() {
-  el("drawer").classList.add("hidden");
-  el("drawerBackdrop").classList.add("hidden");
+  el("drawer")?.classList.add("hidden");
+  el("drawerBackdrop")?.classList.add("hidden");
+  el("drawer")?.setAttribute("aria-hidden", "true");
 }
 
 /* ===============================
@@ -256,12 +341,14 @@ function openQris() {
     alert("Keranjang masih kosong");
     return;
   }
-  el("qrisTotalText").textContent = rupiah(cartTotal());
-  el("qrisModal").classList.remove("hidden");
+  const t = el("qrisTotalText");
+  if (t) t.textContent = rupiah(cartTotal());
+  el("qrisModal")?.classList.remove("hidden");
+  el("qrisModal")?.setAttribute("aria-hidden", "false");
 }
-
 function closeQris() {
-  el("qrisModal").classList.add("hidden");
+  el("qrisModal")?.classList.add("hidden");
+  el("qrisModal")?.setAttribute("aria-hidden", "true");
 }
 
 /* ===============================
@@ -269,7 +356,7 @@ function closeQris() {
 ================================ */
 function checkoutWA() {
   const map = new Map(state.products.map((p) => [p.id, p]));
-  let lines = [];
+  const lines = [];
   let total = 0;
 
   for (const [id, qty] of Object.entries(state.cart)) {
@@ -278,6 +365,11 @@ function checkoutWA() {
     const sub = (p.price || 0) * qty;
     total += sub;
     lines.push(`- ${p.name} x${qty} = ${rupiah(sub)}`);
+  }
+
+  if (!lines.length) {
+    alert("Keranjang masih kosong.");
+    return;
   }
 
   const msg =
@@ -292,15 +384,20 @@ function checkoutWA() {
    INIT
 ================================ */
 document.addEventListener("DOMContentLoaded", async () => {
-  el("openCart").onclick = openDrawer;
-  el("closeCart").onclick = closeDrawer;
-  el("drawerBackdrop").onclick = closeDrawer;
+  // drawer
+  el("openCart") && (el("openCart").onclick = openDrawer);
+  el("closeCart") && (el("closeCart").onclick = closeDrawer);
+  el("drawerBackdrop") && (el("drawerBackdrop").onclick = closeDrawer);
 
-  el("buyNow").onclick = openQris;
-  el("confirmWA").onclick = checkoutWA;
-  el("checkout").onclick = checkoutWA;
+  // tombol bawah drawer
+  el("buyNow") && (el("buyNow").onclick = openQris);
+  el("confirmWA") && (el("confirmWA").onclick = checkoutWA);
+  el("checkout") && (el("checkout").onclick = checkoutWA);
 
-  // ✅ Load produk dari Google Sheets CSV
+  // ✅ tombol "Kosongkan"
+  el("clearCart") && (el("clearCart").onclick = clearCart);
+
+  // load products from Sheets
   try {
     const csvRes = await fetch(SHEET_CSV_URL, { cache: "no-store" });
     const csvText = await csvRes.text();
@@ -308,10 +405,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     state.products = rowsToProducts(rows);
 
     if (!state.products.length) {
-      alert("Produk kosong / gagal terbaca. Pastikan sheet publik (Viewer) & kolom header benar.");
+      alert("Produk kosong / gagal terbaca. Pastikan sheet publik (Viewer) & header kolom benar.");
       console.log("CSV RAW:", csvText);
     }
-
   } catch (e) {
     alert("Gagal mengambil data dari Google Sheets. Pastikan sheet public (Viewer).");
     console.error(e);
@@ -320,5 +416,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   render();
 });
 
-// dipakai tombol X modal di HTML kamu
+// biar tombol X modal kamu (onclick="closeQris()") tetap jalan
 window.closeQris = closeQris;
+
