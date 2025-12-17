@@ -54,6 +54,10 @@ function cartTotal() {
   return total;
 }
 
+function normalizeCategory(s) {
+  return String(s || "").trim();
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")
@@ -73,13 +77,11 @@ function resolveImageUrl(raw) {
   if (!s) return "assets/images/no-image.png";
   if (/^https?:\/\//i.test(s)) return s;
 
-  // normalize backslashes and spaces
   const clean = s.replaceAll("\\", "/").replaceAll(" ", "%20");
 
   if (clean.startsWith("assets/")) return clean;
   if (clean.startsWith("/assets/")) return clean.slice(1);
 
-  // kalau cuma nama file
   return `assets/images/${clean}`;
 }
 
@@ -90,6 +92,7 @@ function resolveImageUrl(raw) {
      <div class="toast-box">✅ Ditambahkan ke keranjang</div>
    </div>
 ================================ */
+let toastTimer = null;
 function showToast(text = "✅ Ditambahkan ke keranjang") {
   const toast = el("toast");
   if (!toast) return;
@@ -98,7 +101,9 @@ function showToast(text = "✅ Ditambahkan ke keranjang") {
   if (box) box.textContent = text;
 
   toast.classList.remove("hidden");
-  setTimeout(() => toast.classList.add("hidden"), 1300);
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.add("hidden"), 1300);
 }
 
 /* ===============================
@@ -184,28 +189,97 @@ function rowsToProducts(rows) {
 }
 
 /* ===============================
-   RENDER PRODUK
+   FILTER + CATEGORY (optional)
+   (kalau kamu punya elemen search/category/sort)
+================================ */
+function buildCategoryOptions() {
+  const sel = el("category");
+  if (!sel) return;
+
+  const cats = Array.from(
+    new Set(state.products.map((p) => normalizeCategory(p.category)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  sel.innerHTML =
+    `<option value="all">Semua Kategori</option>` +
+    cats.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+}
+
+function filteredProducts() {
+  let items = state.products.slice();
+
+  const searchEl = el("search");
+  const q = (searchEl ? searchEl.value : "").trim().toLowerCase();
+  if (q) {
+    items = items.filter(
+      (p) =>
+        (p.name || "").toLowerCase().includes(q) ||
+        (p.category || "").toLowerCase().includes(q)
+    );
+  }
+
+  const catSel = el("category");
+  const cat = normalizeCategory(catSel?.value || "all");
+  if (cat !== "all") {
+    items = items.filter((p) => normalizeCategory(p.category) === cat);
+  }
+
+  const onlyStockEl = el("onlyInStock");
+  const onlyStock = !!(onlyStockEl && onlyStockEl.checked);
+  if (onlyStock) {
+    items = items.filter((p) => (p.stock ?? 0) > 0);
+  }
+
+  const sortEl = el("sort");
+  const sort = sortEl ? sortEl.value : "popular";
+  if (sort === "low") items.sort((a, b) => (a.price || 0) - (b.price || 0));
+  else if (sort === "high") items.sort((a, b) => (b.price || 0) - (a.price || 0));
+  else if (sort === "az") items.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  return items;
+}
+
+/* ===============================
+   RENDER PRODUK (dengan deskripsi/notes)
 ================================ */
 function render() {
   const grid = el("grid");
   if (!grid) return;
 
+  const items = filteredProducts();
   grid.innerHTML = "";
 
-  for (const p of state.products) {
+  for (const p of items) {
     const card = document.createElement("div");
     card.className = "card";
 
     const inStock = (p.stock ?? 0) > 0;
     const img = resolveImageUrl(p.image);
+    const notes = Array.isArray(p.notes) ? p.notes : [];
 
     card.innerHTML = `
       <div class="card-img">
-        <img src="${escapeHtml(img)}" alt="${escapeHtml(p.name || "Produk")}" loading="lazy"
+        <img src="${escapeHtml(img)}"
+             alt="${escapeHtml(p.name || "Produk")}"
+             loading="lazy"
              onerror="this.onerror=null;this.src='assets/images/no-image.png';">
       </div>
+
+      <div class="card-top">
+        <div class="kat">${escapeHtml(p.category || "Produk")}</div>
+        ${p.badge ? `<div class="tag">${escapeHtml(p.badge)}</div>` : ``}
+      </div>
+
       <div class="name">${escapeHtml(p.name || "")}</div>
       <p class="price">${rupiah(p.price)}</p>
+      ${p.unit ? `<div class="unit">${escapeHtml(p.unit)}</div>` : ``}
+
+      ${
+        notes.length
+          ? `<ul class="notes">${notes.map((n) => `<li>${escapeHtml(n)}</li>`).join("")}</ul>`
+          : ``
+      }
+
       <div class="card-foot">
         <span class="stock">${inStock ? `Stok: ${p.stock}` : "Stok habis"}</span>
         <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">
@@ -236,7 +310,7 @@ function addToCart(id) {
   state.cart[id] = (state.cart[id] || 0) + 1;
   saveCart();
   render();
-  showToast();
+  showToast("✅ Ditambahkan ke keranjang");
 }
 
 function incCart(id) {
@@ -280,7 +354,7 @@ function renderCartItems() {
   const ids = Object.keys(state.cart);
 
   if (!ids.length) {
-    wrap.innerHTML = `<p class="muted">Keranjang kosong</p>`;
+    wrap.innerHTML = `<div class="empty"><h3>Keranjang kosong</h3><p>Tambahkan produk dulu ya.</p></div>`;
     return;
   }
 
@@ -384,18 +458,26 @@ function checkoutWA() {
    INIT
 ================================ */
 document.addEventListener("DOMContentLoaded", async () => {
+  // filter events (kalau elemen ada)
+  ["search", "onlyInStock", "category", "sort"].forEach((id) => {
+    const node = el(id);
+    if (!node) return;
+    node.addEventListener("input", render);
+    node.addEventListener("change", render);
+  });
+
   // drawer
-  el("openCart") && (el("openCart").onclick = openDrawer);
-  el("closeCart") && (el("closeCart").onclick = closeDrawer);
-  el("drawerBackdrop") && (el("drawerBackdrop").onclick = closeDrawer);
+  if (el("openCart")) el("openCart").onclick = openDrawer;
+  if (el("closeCart")) el("closeCart").onclick = closeDrawer;
+  if (el("drawerBackdrop")) el("drawerBackdrop").onclick = closeDrawer;
 
   // tombol bawah drawer
-  el("buyNow") && (el("buyNow").onclick = openQris);
-  el("confirmWA") && (el("confirmWA").onclick = checkoutWA);
-  el("checkout") && (el("checkout").onclick = checkoutWA);
+  if (el("buyNow")) el("buyNow").onclick = openQris;
+  if (el("confirmWA")) el("confirmWA").onclick = checkoutWA;
+  if (el("checkout")) el("checkout").onclick = checkoutWA;
 
   // ✅ tombol "Kosongkan"
-  el("clearCart") && (el("clearCart").onclick = clearCart);
+  if (el("clearCart")) el("clearCart").onclick = clearCart;
 
   // load products from Sheets
   try {
@@ -408,6 +490,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       alert("Produk kosong / gagal terbaca. Pastikan sheet publik (Viewer) & header kolom benar.");
       console.log("CSV RAW:", csvText);
     }
+
+    buildCategoryOptions();
   } catch (e) {
     alert("Gagal mengambil data dari Google Sheets. Pastikan sheet public (Viewer).");
     console.error(e);
@@ -418,4 +502,3 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 // biar tombol X modal kamu (onclick="closeQris()") tetap jalan
 window.closeQris = closeQris;
-
