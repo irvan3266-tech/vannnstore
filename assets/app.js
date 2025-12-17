@@ -87,10 +87,6 @@ function resolveImageUrl(raw) {
 
 /* ===============================
    TOAST
-   butuh HTML:
-   <div id="toast" class="toast hidden">
-     <div class="toast-box">✅ Ditambahkan ke keranjang</div>
-   </div>
 ================================ */
 let toastTimer = null;
 function showToast(text = "✅ Ditambahkan ke keranjang") {
@@ -104,6 +100,38 @@ function showToast(text = "✅ Ditambahkan ke keranjang") {
 
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => toast.classList.add("hidden"), 1300);
+}
+
+/* ===============================
+   STOCK AUTO (localStorage)
+   - stok sheet tetap, tapi stok tampil = stock - sold
+================================ */
+function loadSold() {
+  try {
+    return JSON.parse(localStorage.getItem("vannnstore_sold") || "{}");
+  } catch {
+    return {};
+  }
+}
+function saveSold(obj) {
+  localStorage.setItem("vannnstore_sold", JSON.stringify(obj));
+}
+function effectiveStock(p) {
+  const sold = loadSold();
+  const used = Number(sold[p.id] || 0);
+  return Math.max(0, Number(p.stock || 0) - used);
+}
+function applyCheckoutStockReduction() {
+  const sold = loadSold();
+  for (const [id, qty] of Object.entries(state.cart)) {
+    sold[id] = Number(sold[id] || 0) + Number(qty || 0);
+  }
+  saveSold(sold);
+
+  // kosongkan cart
+  state.cart = {};
+  saveCart();
+  render();
 }
 
 /* ===============================
@@ -190,7 +218,6 @@ function rowsToProducts(rows) {
 
 /* ===============================
    FILTER + CATEGORY (optional)
-   (kalau kamu punya elemen search/category/sort)
 ================================ */
 function buildCategoryOptions() {
   const sel = el("category");
@@ -227,7 +254,7 @@ function filteredProducts() {
   const onlyStockEl = el("onlyInStock");
   const onlyStock = !!(onlyStockEl && onlyStockEl.checked);
   if (onlyStock) {
-    items = items.filter((p) => (p.stock ?? 0) > 0);
+    items = items.filter((p) => effectiveStock(p) > 0);
   }
 
   const sortEl = el("sort");
@@ -253,7 +280,9 @@ function render() {
     const card = document.createElement("div");
     card.className = "card";
 
-    const inStock = (p.stock ?? 0) > 0;
+    const stk = effectiveStock(p);
+    const inStock = stk > 0;
+
     const img = resolveImageUrl(p.image);
     const notes = Array.isArray(p.notes) ? p.notes : [];
 
@@ -281,7 +310,7 @@ function render() {
       }
 
       <div class="card-foot">
-        <span class="stock">${inStock ? `Stok: ${p.stock}` : "Stok habis"}</span>
+        <span class="stock">${inStock ? `Stok: ${stk}` : "Stok habis"}</span>
         <button class="smallbtn" type="button" ${inStock ? "" : "disabled"} data-add="${escapeHtml(p.id)}">
           + Keranjang
         </button>
@@ -307,6 +336,12 @@ function render() {
    CART ACTIONS
 ================================ */
 function addToCart(id) {
+  const p = state.products.find((x) => x.id === id);
+  if (p && effectiveStock(p) <= (state.cart[id] || 0)) {
+    showToast("⚠️ Stok tidak cukup");
+    return;
+  }
+
   state.cart[id] = (state.cart[id] || 0) + 1;
   saveCart();
   render();
@@ -314,6 +349,12 @@ function addToCart(id) {
 }
 
 function incCart(id) {
+  const p = state.products.find((x) => x.id === id);
+  if (p && effectiveStock(p) <= (state.cart[id] || 0)) {
+    showToast("⚠️ Stok tidak cukup");
+    return;
+  }
+
   state.cart[id] = (state.cart[id] || 0) + 1;
   saveCart();
   render();
@@ -363,7 +404,6 @@ function renderCartItems() {
     if (!p) continue;
 
     const qty = state.cart[id];
-
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML = `
@@ -426,7 +466,7 @@ function closeQris() {
 }
 
 /* ===============================
-   WHATSAPP
+   WHATSAPP + AUTO REDUCE STOCK
 ================================ */
 function checkoutWA() {
   const map = new Map(state.products.map((p) => [p.id, p]));
@@ -452,6 +492,9 @@ function checkoutWA() {
     `\n\nTotal: ${rupiah(total)}\nPembayaran: QRIS\n\nNama:\nCatatan:`;
 
   window.open(`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`, "_blank");
+
+  // ✅ stok otomatis berkurang setelah checkout (di browser)
+  setTimeout(() => applyCheckoutStockReduction(), 250);
 }
 
 /* ===============================
@@ -476,7 +519,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (el("confirmWA")) el("confirmWA").onclick = checkoutWA;
   if (el("checkout")) el("checkout").onclick = checkoutWA;
 
-  // ✅ tombol "Kosongkan"
+  // tombol "Kosongkan"
   if (el("clearCart")) el("clearCart").onclick = clearCart;
 
   // load products from Sheets
